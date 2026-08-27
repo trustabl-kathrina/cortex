@@ -423,6 +423,17 @@ Priority order:
   `third_party/` to `THIRD_PARTY_NOTICES.md`; remove `random-file.txt`, the stale
   `allowBuilds` line and `@yarnpkg/cli-dist`.
 
+## Post-audit change log
+
+**2026-08-27 — web grounding removed.** The entire `packages/web` family (`web` seam,
+`tool-web` with the model-facing `web_search`/`web_fetch` tools, `web-fetch-http`,
+`web-search-exa`, `web-search-perplexity`) was deleted, along with every composition row,
+dependency declaration, and generated-catalog entry that referenced it. This closes the
+`web-fetch-http` SSRF exposure and removes the `web_search`/`web_fetch` rows from the §5
+egress map entirely: the model now has no web search or fetch tools in any preset.
+Remaining outbound paths are unchanged: the user-configured LLM provider, the Atlassian
+integration (inert until configured), model-run shell commands, and the editor sidecar (M1).
+
 ## Limitations of this audit
 
 - Static analysis of the tracked tree at commit `9182f62` plus rebuilds and registry

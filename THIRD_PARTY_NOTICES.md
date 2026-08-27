@@ -36,7 +36,6 @@ External packages that a workspace package resolves at runtime. The tier covers 
 | [`@anthropic-ai/sdk`](https://github.com/anthropics/anthropic-sdk-typescript) | MIT |
 | [`@babel/code-frame`](https://github.com/babel/babel) | MIT |
 | [`@earendil-works/pi-ai`](https://github.com/earendil-works/pi) | MIT |
-| [`@joplin/turndown-plugin-gfm`](https://github.com/laurent22/joplin-turndown-plugin-gfm) | MIT |
 | [`@jridgewell/gen-mapping`](https://github.com/jridgewell/sourcemaps) | MIT |
 | [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) | MIT |
 | [`@shikijs/langs`](https://github.com/shikijs/shiki) | MIT |
@@ -74,7 +73,6 @@ External packages that a workspace package resolves at runtime. The tier covers 
 | [`shiki`](https://github.com/shikijs/shiki) | MIT |
 | [`supports-color`](https://github.com/chalk/supports-color) | MIT |
 | [`tsx`](https://github.com/privatenumber/tsx) | MIT |
-| [`turndown`](https://github.com/mixmark-io/turndown) | MIT |
 | [`typescript`](https://github.com/microsoft/TypeScript) | Apache-2.0 |
 | [`use-sync-external-store`](https://github.com/facebook/react) | MIT |
 | [`ws`](https://github.com/websockets/ws) | MIT |
@@ -124,7 +122,6 @@ External packages **directly declared** only by repository tooling, test infrast
 | [`@types/react`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/react-dom`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/spdx-expression-parse`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
-| [`@types/turndown`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/ws`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@vitejs/plugin-react`](https://github.com/vitejs/vite-plugin-react) | MIT |
 | [`@vitest/coverage-v8`](https://github.com/vitest-dev/vitest) | MIT |

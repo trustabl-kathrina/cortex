@@ -56,7 +56,6 @@ const SUBAGENT_CONTINUABLE_INHERITANCE_CONFIG = fileURLToPath(
   new URL('../subagent-continuable-inheritance.cordis.yml', import.meta.url),
 )
 const LSP_CONFIG = fileURLToPath(new URL('./lsp.cordis.yml', import.meta.url))
-const WEB_CONFIG = fileURLToPath(new URL('../web.cordis.yml', import.meta.url))
 const FS_SEARCH_CONFIG = fileURLToPath(new URL('./fs-search.cordis.yml', import.meta.url))
 const PARTIAL_LANDLOCK_CONFIG = fileURLToPath(new URL('../partial-landlock.cordis.yml', import.meta.url))
 const PWSH_CONFIG = fileURLToPath(new URL('./pwsh.cordis.yml', import.meta.url))
@@ -282,12 +281,6 @@ const SCENARIOS: Scenario[] = [
     toolSchemasSource: 'text-turn',
   },
   { name: 'lsp-definition', hasModelTurn: true, recorded: false, pinsHeader: true, headerClass: 'lsp', configPath: LSP_CONFIG },
-  // web_fetch markdown rendering end to end: the overlay's loopback fixture
-  // server supplies deterministic HTML (entities, a GFM table, nesting), the
-  // REAL local fetch provider retrieves it, and the tool result pins the
-  // turndown conversion. The fetched URL (fixed port) is part of the recorded
-  // transcript; replay re-executes the real fetch against the same fixture.
-  { name: 'web-fetch', hasModelTurn: true, recorded: true, pinsHeader: true, headerClass: 'web', configPath: WEB_CONFIG },
   {
     name: 'workspace-edit',
     hasModelTurn: true,

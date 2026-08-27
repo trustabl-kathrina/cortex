@@ -258,7 +258,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'system-prompt',
     title: 'System prompt assembly registry',
     mode: 'core',
-    consumers: ['agent-loop', 'tools', 'tool-fs', 'tool-terminal', 'tool-web'],
+    consumers: ['agent-loop', 'tools', 'tool-fs', 'tool-terminal'],
     note: 'Collects prompt sections and model-facing tool schemas for each step.',
   },
   {
@@ -266,7 +266,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'tools',
     title: 'Tool registry and guarded execution pipeline',
     mode: 'core',
-    consumers: ['agent-loop', 'tool-ask-user', 'tool-bash', 'tool-cordis', 'tool-fs', 'tool-terminal', 'tool-skill', 'tool-subagent', 'tool-todo', 'tool-web'],
+    consumers: ['agent-loop', 'tool-ask-user', 'tool-bash', 'tool-cordis', 'tool-fs', 'tool-terminal', 'tool-skill', 'tool-subagent', 'tool-todo'],
     note: 'Registers capabilities, owns Code Mode transport, and routes calls through pre-policy, monotonic guards, around dispatch, post-policy, and final-result observation.',
   },
   {
@@ -353,6 +353,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'Same-session goal domain',
     mode: 'core',
     note: 'Folds revisioned objective state from the session log and keeps live continuation activation process-local.',
+  },
+  {
+    key: 'atlassian',
+    pkg: 'atlassian',
+    title: 'Atlassian Data Center integration service',
+    mode: 'core',
+    consumers: [],
+    note: 'Owns Jira/Confluence/Bitbucket DC connection settings and status, the vendored MCP server mounts, pinning, and the PR review flow; the client panel consumes it over the API gateway.',
   },
   {
     key: 'e2b',
@@ -477,15 +485,6 @@ const SERVICE_ROLES: ServiceRole[] = [
     implementations: ['jobs-local'],
     consumers: ['tool-bash', 'tool-terminal', 'tool-subagent', 'tool-jobs'],
     note: 'Producers (background bash, PTY sends, and subagent delegations) register running work; tool-jobs is the model-facing controller that reads, lists, and kills it; jobs-local is the process-local registry.',
-  },
-  {
-    key: 'web',
-    pkg: 'web',
-    title: 'Web access provider registry',
-    mode: 'seam',
-    implementations: ['web-search-exa', 'web-search-perplexity', 'web-fetch-http'],
-    consumers: ['tool-web'],
-    note: 'Search and fetch providers register into one ctx.web seam; tool-web owns the stable model-facing names.',
   },
   {
     key: 'spillStore',

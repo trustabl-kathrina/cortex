@@ -102,13 +102,10 @@
     "@cortex/tool-subagent-report": "workspace:*",
     "@cortex/tool-jobs": "workspace:*",
     "@cortex/tool-todo": "workspace:*",
-    "@cortex/tool-web": "workspace:*",
     "@cortex/tool-workflow": "workspace:*",
     "@cortex/tools": "workspace:*",
     "@cortex/user-approval": "workspace:*",
     "@cortex/user-questions": "workspace:*",
-    "@cortex/web": "workspace:*",
-    "@cortex/web-fetch-http": "workspace:*",
     "@cortex/workflow-worker-thread": "workspace:*",
     "@cortex/agent-instructions": "workspace:*"
   }

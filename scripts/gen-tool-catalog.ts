@@ -28,9 +28,6 @@ import { AttachmentStore } from '@cortex/attachment'
 import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, StoredImageAttachment } from '@cortex/attachment'
 import UserQuestionService from '@cortex/user-questions'
 import PlanModeController from '@cortex/plan-mode'
-import WebRuntime from '@cortex/web'
-import * as WebSearchExa from '@cortex/web-search-exa'
-import * as WebFetchLocal from '@cortex/web-fetch-http'
 import SubagentRuntime from '@cortex/subagent'
 import type { SubagentProvider, SubagentReportDelivery } from '@cortex/subagent'
 import * as ToolSubagentControl from '@cortex/tool-subagent-control'
@@ -60,7 +57,6 @@ import * as ToolSessionQuery from '@cortex/tool-session-query'
 import * as ToolTasks from '@cortex/tool-jobs'
 import * as ToolTodo from '@cortex/tool-todo'
 import * as ToolSubagent from '@cortex/tool-subagent'
-import * as ToolWeb from '@cortex/tool-web'
 import VmWorkflowEngine from '@cortex/workflow-worker-thread'
 import * as ToolRalph from '@cortex/tool-ralph'
 import * as ToolWorkflow from '@cortex/tool-workflow'
@@ -555,23 +551,6 @@ const TOOL_PACKAGES: ToolPackage[] = [
       await ctx.plugin(VmWorkflowEngine, { provider: 'mock' })
       await ctx.plugin(ToolWorkflow)
     },
-  },
-  {
-    pkg: '@cortex/tool-web',
-    dir: 'tool-web',
-    source: 'packages/web/tool-web/src/index.ts',
-    requires: ['ctx.tools', 'ctx.web', 'ctx.systemPrompt'],
-    writes: ['tool/call', 'tool/result'],
-    async mount(ctx) {
-      // Mount search and fetch providers so both tools register. Their schemas
-      // do not depend on provider identity or availability.
-      await ctx.plugin(WebRuntime)
-      await ctx.plugin(WebSearchExa)
-      await ctx.plugin(WebFetchLocal)
-      await ctx.plugin(ToolWeb)
-    },
-    note:
-      'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
   },
 ]
 

@@ -348,6 +348,95 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'atlassian',
+    summary: '`ctx.atlassian`: the whole Jira/Confluence/Bitbucket seam.',
+    description: '`ctx.atlassian`: the whole Jira/Confluence/Bitbucket seam.',
+    methods: [
+      {
+        signature: 'fetchImpl: FetchLike = (input, init) => fetch(input, init)',
+        description: 'Fetch implementation used by the REST adapters (tests substitute a fake).',
+        parameters: [],
+      },
+      {
+        signature: 'clock: Clock = defaultClock',
+        description: 'Clock and id source.',
+        parameters: [],
+      },
+      {
+        signature: 'settings(): AtlassianSettings',
+        description: 'Current settings (schema defaults until a provider is composed).',
+        parameters: [],
+        returns: 'the resolved section.',
+      },
+      {
+        signature: 'async reconcile(): Promise<void>',
+        description: 'Recompute both mount plans and bring the children in line.',
+        parameters: [],
+        returns: 'completion once the mounts settled.',
+      },
+      {
+        signature: '@Remote(\'status\') status(): AtlassianStatus',
+        description: 'Whole integration status.',
+        parameters: [],
+        returns: 'mount phases, tool counts, and REST readiness.',
+      },
+      {
+        signature: '@Remote(\'reconnect\') async reconnect(): Promise<AtlassianStatus>',
+        description: 'Retry failed mounts and recompute plans after a settings/credential change.',
+        parameters: [],
+        returns: 'status after the retry settled.',
+      },
+      {
+        signature: '@Remote(\'probe\') async probe(request: ProbeRequest): Promise<ProbeResult>',
+        description: 'Probe one service with the stored URL and token.',
+        parameters: [{ name: 'request', description: 'which service.' }],
+        returns: 'the probe outcome.',
+      },
+      {
+        signature: '@Remote(\'open\') open(agent: Agent, request: OpenRequest): Promise<OpenResult>',
+        description: 'Fetch one entity, record it, and focus the panel on it.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'which entity.' }],
+        returns: 'the entity reference or a failure.',
+      },
+      {
+        signature: '@Remote(\'pin\') async pin(agent: Agent, request: PinRequest): Promise<AckResult>',
+        description: 'Pin (or clear) the session\'s ticket.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'key or `null`.' }],
+        returns: 'acknowledgement.',
+      },
+      {
+        signature: '@Remote(\'listPullRequests\') async listPullRequests(request: ListPullRequestsRequest): Promise<ListPullRequestsResult>',
+        description: 'List pull requests for the picker.',
+        parameters: [{ name: 'request', description: 'inbox or one repository.' }],
+        returns: 'picker rows.',
+      },
+      {
+        signature: '@Remote(\'postFinding\') async postFinding(agent: Agent, request: PostFindingRequest): Promise<PostFindingResult>',
+        description: 'Post one review finding to Bitbucket, inline on its diff line when the line is part of the diff, as a general comment otherwise.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'review, finding, optional comment override.' }],
+        returns: 'the posted comment.',
+      },
+      {
+        signature: '@Remote(\'dismissFinding\') dismissFinding(agent: Agent, request: DismissFindingRequest): AckResult',
+        description: 'Dismiss one finding (never posted).',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'review and finding.' }],
+        returns: 'acknowledgement.',
+      },
+      {
+        signature: '@Remote(\'cancelReview\') cancelReview(agent: Agent, request: CancelReviewRequest): AckResult',
+        description: 'Cancel the running review of a session.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'review to cancel.' }],
+        returns: 'acknowledgement.',
+      },
+      {
+        signature: '@Remote(\'diffContext\') async diffContext(request: DiffContextRequest): Promise<DiffContextResult>',
+        description: 'Diff lines around one finding for the evidence view.',
+        parameters: [{ name: 'request', description: 'PR, file, line, side.' }],
+        returns: 'the window.',
+      },
+    ],
+  },
+  {
     key: 'attachments',
     summary: 'Immutable binary attachment service.',
     description: 'Immutable binary attachment service. Implementations validate bytes before publishing a reference.',
@@ -2024,37 +2113,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
-    key: 'web',
-    summary: 'The web access service.',
-    description: 'The web access service. Registered as `ctx.web` (one instance per context).\n\nSelection semantics (resolved at execution time, never order-dependent):\n\n- A configured id that is registered and `available()` → that provider.\n- A configured id not registered → `WEB_PROVIDER_CONFIGURED_MISSING`.\n- A configured id registered but unavailable → `WEB_PROVIDER_CONFIGURED_UNAVAILABLE`.\n- No id configured, exactly one registered usable provider → that provider.\n- No id configured, multiple usable providers → `WEB_PROVIDER_AMBIGUOUS`.\n- No id configured, no usable provider → `WEB_PROVIDER_UNAVAILABLE`.',
-    methods: [
-      {
-        signature: 'registerSearchProvider(provider: WebSearchProvider): () => void',
-        description: 'Register a search provider. Throws WebError `WEB_DUPLICATE_PROVIDER` if its id is already registered for search. Returns a disposer; disposed with the calling fiber.',
-        parameters: [{ name: 'provider', description: 'the provider; its `id` is the registry key.' }],
-        returns: 'the disposer that unregisters the provider.',
-      },
-      {
-        signature: 'registerFetchProvider(provider: WebFetchProvider): () => void',
-        description: 'Register a fetch provider. Throws WebError `WEB_DUPLICATE_PROVIDER` if its id is already registered for fetch. Returns a disposer; disposed with the calling fiber.',
-        parameters: [{ name: 'provider', description: 'the provider; its `id` is the registry key.' }],
-        returns: 'the disposer that unregisters the provider.',
-      },
-      {
-        signature: 'async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>',
-        description: 'Run one search through the selected provider. Resolves the provider at call time with the selection rules above; throws WebError when the capability cannot run. The seam enforces `request.maxResults` on the result: if the provider over-returns, `sources[]` is truncated and `truncated` set.',
-        parameters: [{ name: 'request', description: 'the query and optional result limit.' }, { name: 'signal', description: 'optional cancellation signal forwarded to the provider.' }],
-        returns: 'the provider\'s results, capped to `request.maxResults`.',
-      },
-      {
-        signature: 'async fetch(request: WebFetchRequest, signal?: AbortSignal): Promise<WebFetchResult>',
-        description: 'Retrieve one URL through the selected provider. Resolves the provider at call time with the selection rules above; throws WebError when the capability cannot run. A non-2xx response is a result, not a throw.',
-        parameters: [{ name: 'request', description: 'the URL plus retrieval options.' }, { name: 'signal', description: 'optional cancellation signal forwarded to the provider.' }],
-        returns: 'the retrieval outcome; non-2xx responses resolve descriptively.',
-      },
-    ],
-  },
-  {
     key: 'webServer',
     summary: 'The browser HTTP carrier service.',
     description: 'The browser HTTP carrier service. Activation listens immediately. Route registration order does not affect requests because configured named routes must be distinct, and the fallback handler answers anything not yet claimed during startup with 404 until its owner registers. A listen failure rejects initialization, and the boot process reports the failed fiber.',
@@ -2610,6 +2668,10 @@ export const EVENT_API: readonly EventApiEntry[] = [
 /** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */
 export const TYPE_API: readonly TypeApiEntry[] = [
   {
+    name: 'AckResult',
+    declaration: 'export type AckResult = {\n    ok: true;\n} | RemoteFailureView;',
+  },
+  {
     name: 'AdapterRegistrationHandle',
     declaration: 'export interface AdapterRegistrationHandle {\n    (): void;\n    replace(providers: string[]): void;\n}',
   },
@@ -2710,6 +2772,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface AssistantProvenance {\n    provider: string;\n    model: string;\n    replayState?: unknown;\n}',
   },
   {
+    name: 'AtlassianSettings',
+    declaration: 'export interface AtlassianSettings {\n    jiraUrl: string;\n    jiraTokenRef: string;\n    jiraProjectsFilter: string;\n    confluenceUrl: string;\n    confluenceTokenRef: string;\n    confluenceSpacesFilter: string;\n    bitbucketUrl: string;\n    bitbucketTokenRef: string;\n    bitbucketDefaultProject: string;\n    atlassianLaunch: string;\n    bitbucketLaunch: string;\n    writes: \'ask\' | \'allow\' | \'deny\';\n    toolsets: string;\n    enabledTools: string;\n}',
+  },
+  {
+    name: 'AtlassianStatus',
+    declaration: 'export interface AtlassianStatus {\n    atlassian: MountStatus;\n    bitbucket: MountStatus;\n    rest: {\n        jira: boolean;\n        confluence: boolean;\n        bitbucket: boolean;\n    };\n}',
+  },
+  {
     name: 'AttachmentId',
     declaration: 'export type AttachmentId = Branded<\'AttachmentId\'>;',
   },
@@ -2736,6 +2806,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'CancelOptions',
     declaration: 'export interface CancelOptions {\n    keepInbox?: boolean | undefined;\n}',
+  },
+  {
+    name: 'CancelReviewRequest',
+    declaration: 'export interface CancelReviewRequest {\n    reviewId: string;\n}',
   },
   {
     name: 'ClientResponse',
@@ -2938,8 +3012,24 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface DiffCallView {\n    card: \'diff\';\n    title: string;\n    diffs: FileDiff[];\n    locations?: FileLocation[];\n}',
   },
   {
+    name: 'DiffContextLine',
+    declaration: 'export interface DiffContextLine {\n    type: DiffSide;\n    source?: number;\n    destination?: number;\n    text: string;\n    anchor?: boolean;\n}',
+  },
+  {
+    name: 'DiffContextRequest',
+    declaration: 'export interface DiffContextRequest {\n    pr: PrRef;\n    file: string;\n    line: number;\n    side: DiffSide;\n    context?: number;\n}',
+  },
+  {
+    name: 'DiffContextResult',
+    declaration: 'export type DiffContextResult = {\n    ok: true;\n    file: string;\n    lines: DiffContextLine[];\n    found: boolean;\n} | RemoteFailureView;',
+  },
+  {
     name: 'DiffResultView',
     declaration: 'export interface DiffResultView {\n    card: \'diff\';\n    title?: string;\n    diffs: FileDiff[];\n}',
+  },
+  {
+    name: 'DiffSide',
+    declaration: 'export type DiffSide = \'ADDED\' | \'REMOVED\' | \'CONTEXT\';',
   },
   {
     name: 'DirectoryPickerBrowseCapability',
@@ -2960,6 +3050,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DirectoryRegistrationHandle',
     declaration: 'export interface DirectoryRegistrationHandle {\n    (): void;\n    replace(entries: readonly LlmConfigurableProvider[]): void;\n}',
+  },
+  {
+    name: 'DismissFindingRequest',
+    declaration: 'export interface DismissFindingRequest {\n    reviewId: string;\n    findingId: string;\n}',
   },
   {
     name: 'Domain',
@@ -3030,8 +3124,16 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface EditGoalRequest {\n    readonly objective?: string;\n    readonly maxGoalRounds?: number;\n}',
   },
   {
+    name: 'EntityRef',
+    declaration: 'export type EntityRef = {\n    kind: \'issue\';\n    key: string;\n} | {\n    kind: \'page\';\n    id: string;\n} | {\n    kind: \'pr\';\n    key: string;\n};',
+  },
+  {
     name: 'EpochHeader',
     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    system?: string;\n    tools?: ToolSchema[];\n}',
+  },
+  {
+    name: 'FetchLike',
+    declaration: 'export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;',
   },
   {
     name: 'FileDiff',
@@ -3266,6 +3368,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface KvUnitDescriptor {\n    readonly name: string;\n    readonly version: number;\n    readonly tables: readonly string[];\n    readonly hasGlobal: boolean;\n}',
   },
   {
+    name: 'ListPullRequestsRequest',
+    declaration: 'export interface ListPullRequestsRequest {\n    scope: \'inbox\' | \'repo\';\n    project?: string;\n    repo?: string;\n    state?: \'OPEN\' | \'MERGED\' | \'DECLINED\' | \'ALL\';\n}',
+  },
+  {
+    name: 'ListPullRequestsResult',
+    declaration: 'export type ListPullRequestsResult = {\n    ok: true;\n    items: PrSummary[];\n} | RemoteFailureView;',
+  },
+  {
     name: 'LlmAdapter',
     declaration: 'export abstract class LlmAdapter {\n    providerInfo(provider: string): LlmProviderInfo;\n    providerRetryPolicy(_provider: string): ResolvedRetryPolicy | undefined;\n    listModels(_provider: string): Promise<readonly LlmModelInfo[]>;\n    resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    abstract stream(options: GenerateOptions): AsyncIterable<StreamChunk>;\n}',
   },
@@ -3470,6 +3580,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelModalityMap {\n    text: \'text\';\n    image: \'image\';\n}',
   },
   {
+    name: 'MountPhase',
+    declaration: 'export type MountPhase = \'off\' | \'starting\' | \'ready\' | \'error\';',
+  },
+  {
+    name: 'MountStatus',
+    declaration: 'export interface MountStatus {\n    phase: MountPhase;\n    toolCount: number;\n    error?: string;\n    missing?: (\'url\' | \'token\' | \'launch\')[];\n}',
+  },
+  {
     name: 'ObjectJsonSchema',
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
   },
@@ -3478,8 +3596,32 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
   },
   {
+    name: 'OpenRequest',
+    declaration: 'export type OpenRequest = {\n    kind: \'issue\';\n    key: string;\n} | {\n    kind: \'page\';\n    id: string;\n} | {\n    kind: \'pr\';\n    pr: PrRef;\n};',
+  },
+  {
+    name: 'OpenResult',
+    declaration: 'export type OpenResult = {\n    ok: true;\n    entity: EntityRef;\n} | RemoteFailureView;',
+  },
+  {
     name: 'PermissionSelect',
     declaration: 'export interface PermissionSelect {\n    options: PresetOption[];\n    currentValue: string;\n}',
+  },
+  {
+    name: 'PersonRef',
+    declaration: 'export interface PersonRef {\n    name: string;\n    id?: string;\n    avatar?: string;\n}',
+  },
+  {
+    name: 'PinRequest',
+    declaration: 'export interface PinRequest {\n    key: string | null;\n}',
+  },
+  {
+    name: 'PostFindingRequest',
+    declaration: 'export interface PostFindingRequest {\n    reviewId: string;\n    findingId: string;\n    comment?: string;\n}',
+  },
+  {
+    name: 'PostFindingResult',
+    declaration: 'export type PostFindingResult = {\n    ok: true;\n    commentId: number;\n    url?: string;\n    mode: \'inline\' | \'general\';\n} | RemoteFailureView;',
   },
   {
     name: 'PostToolDecision',
@@ -3518,6 +3660,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type PreToolDecision = {\n    kind: \'allow\';\n} | {\n    kind: \'deny\';\n    reason: string;\n} | {\n    kind: \'ask\';\n    reason?: string;\n};',
   },
   {
+    name: 'ProbeRequest',
+    declaration: 'export interface ProbeRequest {\n    service: \'jira\' | \'confluence\' | \'bitbucket\';\n}',
+  },
+  {
+    name: 'ProbeResult',
+    declaration: 'export interface ProbeResult {\n    service: \'jira\' | \'confluence\' | \'bitbucket\';\n    ok: boolean;\n    user?: string;\n    error?: string;\n}',
+  },
+  {
     name: 'ProjectionChangeListener',
     declaration: 'export type ProjectionChangeListener = (session: Session, key: Extract<keyof SessionProjectionMap, string>, value: unknown, seq: number) => void;',
   },
@@ -3554,6 +3704,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ProviderRequestId = Branded<\'ProviderRequestId\'>;',
   },
   {
+    name: 'PrRef',
+    declaration: 'export interface PrRef {\n    project: string;\n    repo: string;\n    id: number;\n}',
+  },
+  {
+    name: 'PrSummary',
+    declaration: 'export interface PrSummary {\n    ref: PrRef;\n    key: string;\n    title: string;\n    author: PersonRef;\n    state: \'OPEN\' | \'MERGED\' | \'DECLINED\';\n    updated?: string;\n    approvals: number;\n    reviewers: number;\n    url: string;\n    role?: \'REVIEWER\' | \'AUTHOR\' | \'PARTICIPANT\';\n}',
+  },
+  {
     name: 'PrunedEntry',
     declaration: 'export interface PrunedEntry {\n    readonly originalSeq: number;\n    readonly replacementSeq: number;\n    readonly callId: CallId;\n    readonly charsBefore: number;\n    readonly charsAfter: number;\n}',
   },
@@ -3580,6 +3738,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'RedactedSecret',
     declaration: 'export interface RedactedSecret {\n    path: string[];\n    set: boolean;\n}',
+  },
+  {
+    name: 'RemoteFailureView',
+    declaration: 'export interface RemoteFailureView {\n    ok: false;\n    code: string;\n    message: string;\n}',
   },
   {
     name: 'RequestContext',
@@ -4546,22 +4708,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface WebBootGraph {\n    rev: string;\n    entries: WebBootEntry[];\n}',
   },
   {
-    name: 'WebFetchBody',
-    declaration: 'export type WebFetchBody = {\n    readonly kind: \'html\';\n    readonly content: string;\n} | {\n    readonly kind: \'text\';\n    readonly content: string;\n};',
-  },
-  {
-    name: 'WebFetchProvider',
-    declaration: 'export interface WebFetchProvider {\n    readonly id: string;\n    available(): boolean;\n    fetch(request: WebFetchRequest, signal?: AbortSignal): Promise<WebFetchResult>;\n}',
-  },
-  {
-    name: 'WebFetchRequest',
-    declaration: 'export interface WebFetchRequest {\n    readonly url: string;\n}',
-  },
-  {
-    name: 'WebFetchResult',
-    declaration: 'export interface WebFetchResult {\n    readonly url: string;\n    readonly statusCode: number;\n    readonly body: WebFetchBody;\n    readonly truncated: boolean;\n}',
-  },
-  {
     name: 'WebFetchResultView',
     declaration: 'export interface WebFetchResultView {\n    card: \'web\';\n    kind: \'fetch\';\n    title?: string;\n    url: string;\n    statusCode: number;\n    truncated: boolean;\n}',
   },
@@ -4578,24 +4724,8 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type WebRouteKind = \'exact\' | \'prefix\';',
   },
   {
-    name: 'WebSearchProvider',
-    declaration: 'export interface WebSearchProvider {\n    readonly id: string;\n    available(): boolean;\n    search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;\n}',
-  },
-  {
-    name: 'WebSearchRequest',
-    declaration: 'export interface WebSearchRequest {\n    readonly query: string;\n    readonly maxResults?: number;\n}',
-  },
-  {
-    name: 'WebSearchResult',
-    declaration: 'export interface WebSearchResult {\n    readonly content?: string;\n    readonly sources: readonly WebSearchSource[];\n    readonly truncated: boolean;\n}',
-  },
-  {
     name: 'WebSearchResultView',
     declaration: 'export interface WebSearchResultView {\n    card: \'web\';\n    kind: \'search\';\n    title?: string;\n    sources: WebSource[];\n    answer?: string;\n    truncated: boolean;\n}',
-  },
-  {
-    name: 'WebSearchSource',
-    declaration: 'export interface WebSearchSource {\n    readonly url: string;\n    readonly title?: string;\n    readonly snippet?: string;\n    readonly publishedAt?: string;\n}',
   },
   {
     name: 'WebSource',

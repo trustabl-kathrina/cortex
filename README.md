@@ -27,6 +27,9 @@ contacts nothing until you configure a model provider.
 
 Read the full report: [SECURITY-AUDIT.md](SECURITY-AUDIT.md).
 
+As of 2026-08-27 the web tool packages are removed entirely: the model has no
+`web_search`/`web_fetch` tools and no web grounding of any kind.
+
 ## Run
 
 ```sh

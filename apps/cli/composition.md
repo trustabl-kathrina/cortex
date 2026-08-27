@@ -146,10 +146,6 @@ flowchart LR
   cfg --> plugin_cortex_base_tool_str_replace_editor
   plugin_cortex_base_repeat_tool_reminder["repeat-tool-reminder<br/>@cortex/repeat-tool-reminder"]
   cfg --> plugin_cortex_base_repeat_tool_reminder
-  plugin_cortex_base_web["web<br/>@cortex/web"]
-  cfg --> plugin_cortex_base_web
-  plugin_cortex_base_tool_web["tool-web<br/>@cortex/tool-web"]
-  cfg --> plugin_cortex_base_tool_web
   plugin_cortex_base_tools["tools<br/>@cortex/tools"]
   cfg --> plugin_cortex_base_tools
   plugin_cortex_base_system_prompt["system-prompt<br/>@cortex/system-prompt"]
@@ -231,8 +227,6 @@ flowchart LR
 | `tool-ralph` | `@cortex/tool-ralph` |
 | `tool-str-replace-editor` | `@cortex/tool-str-replace-editor` |
 | `repeat-tool-reminder` | `@cortex/repeat-tool-reminder` |
-| `web` | `@cortex/web` |
-| `tool-web` | `@cortex/tool-web` |
 | `tools` | `@cortex/tools` |
 | `system-prompt` | `@cortex/system-prompt` |
 | `agent-loop` | `@cortex/agent-loop` |

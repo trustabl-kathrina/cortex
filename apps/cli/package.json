@@ -72,7 +72,6 @@
     "@cortex/tool-subagent-control": "workspace:^",
     "@cortex/tool-jobs": "workspace:^",
     "@cortex/tool-todo": "workspace:^",
-    "@cortex/tool-web": "workspace:^",
     "@cortex/tool-workflow": "workspace:^",
     "@cortex/web-app": "workspace:^",
     "@cortex/workflow-worker-thread": "workspace:^",

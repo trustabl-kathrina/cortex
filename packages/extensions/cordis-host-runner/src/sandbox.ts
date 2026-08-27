@@ -2,7 +2,7 @@
  * The `node:vm` sandbox a dynamic package's HOST half evaluates in: a fresh realm whose globals
  * are a tagged write-through console, the `harness` registration helpers, the encoding primitives
  * a bare vm context lacks, and callable traps over the Node APIs the sandbox deliberately
- * withholds. Traps steer filesystem, network, process, and timer work to `ctx.fs`, `ctx.web`,
+ * withholds. Traps steer filesystem, process, and timer work to `ctx.fs`,
  * `ctx.bash`, and Cordis timers. This keeps cooperative packages inspectable and disposable but
  * is not containment: host-realm helper functions remain an escape route.
  *
@@ -96,15 +96,15 @@ const TIMER_REDIRECT
 const NODE_API_REDIRECTS: Record<string, string> = {
   require:
     'Node modules are unavailable. Use the cordis services on ctx instead — e.g. inject: [\'fs\'] for files, '
-    + '[\'web\'] for HTTP, [\'bash\'] for processes; query Service.listService with cordis_inspect_query first.',
+    + '[\'bash\'] for processes; query Service.listService with cordis_inspect_query first.',
   setTimeout: TIMER_REDIRECT,
   setInterval: TIMER_REDIRECT,
   setImmediate: TIMER_REDIRECT,
   clearTimeout: TIMER_REDIRECT,
   clearInterval: TIMER_REDIRECT,
   fetch:
-    'Network access goes through the cordis web service: declare inject: [\'web\'] and call ctx.web '
-    + '(query Host Service.listService with cordis_inspect_query for its methods).',
+    'Network access is not available in this deployment: the web service is not mounted, and the '
+    + 'dynamic package sandbox provides no direct network APIs.',
 }
 
 /** Build the trap functions for {@link NODE_API_REDIRECTS}: calling one throws the redirect. */

@@ -361,25 +361,6 @@
         thresholds: [3, 5, 8]
         argumentsPreviewChars: 500
 
-    # Every mode enables the stable model-facing web_search tool. Cortex search
-    # resolves the same CORTEX_API_KEY credential the Models page manages for
-    # chat, at each search; its Messages endpoint is separate from the
-    # chat-completions endpoint, so it takes its own base-URL override. Fetch stays
-    # disabled and no fetch provider is mounted: that provider defers SSRF
-    # protection and the model would choose the request target. Search is a full
-    # auxiliary model request with server-side retrieval, so this shipped Cortex
-    # route gets 60s while the provider-neutral tool default remains 30s.
-    - id: web
-      name: '@cortex/web'
-      config:
-        searchProvider: cortex-official
-
-    - id: tool-web
-      name: '@cortex/tool-web'
-      config:
-        fetch: false
-        searchTimeoutMs: 60000
-
     # ── rows every mode mounts, whose values each overlay may state ──────────────
 
     # The tool registry. Presentation mode is a deployment choice; omitting it here

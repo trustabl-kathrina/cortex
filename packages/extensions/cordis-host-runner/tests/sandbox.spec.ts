@@ -54,7 +54,7 @@ describe('sandbox isolation and Node-API traps', () => {
   it.each([
     ['require(\'fs\')', 'require is not available in the dynamic package sandbox', 'inject: [\'fs\']'],
     ['setTimeout(() => {}, 5)', 'setTimeout is not available in the dynamic package sandbox', 'ctx.timeout / ctx.interval'],
-    ['fetch(\'https://example.com\')', 'fetch is not available in the dynamic package sandbox', 'ctx.web'],
+    ['fetch(\'https://example.com\')', 'fetch is not available in the dynamic package sandbox', 'not available in this deployment'],
   ])('traps the Node API call %s with a redirect to the cordis alternative', async (invocation, trapMessage, redirect) => {
     const harness = await setup()
     const failure = await mount(harness, `${invocation}\nreturn (ctx) => {}`).catch((error: unknown) =>

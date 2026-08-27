@@ -39,7 +39,6 @@ This table connects model-visible tool names to the plugin package and service s
 | `@cortex/tool-jobs` | `job_kill`, `job_list`, `job_output` | `ctx.tools`, `ctx.jobs`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `user/message via agent.inject() for background completion notices` | - | The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`. |
 | `@cortex/tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@cortex/tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
-| `@cortex/tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
 <a id="cortextool-ask-user"></a>
 
@@ -1947,51 +1946,3 @@ Constraints: concurrency and total-agent caps apply; no filesystem, network, tim
 ```
 
 Source: [`packages/workflow/tool-workflow/src/index.ts`](../packages/workflow/tool-workflow/src/index.ts)
-
-<a id="cortextool-web"></a>
-
-## `@cortex/tool-web`
-
-### `web_fetch`
-
-Fetch the content of a specific HTTP(S) URL and return it decoded to text.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "url": {
-      "type": "string",
-      "description": "The HTTP(S) URL to fetch."
-    }
-  },
-  "required": [
-    "url"
-  ]
-}
-```
-
-Source: [`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
-
-### `web_search`
-
-Search the web for current information. Returns an optional summary answer and a list of source URLs.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "query": {
-      "type": "string",
-      "description": "The search query."
-    }
-  },
-  "required": [
-    "query"
-  ]
-}
-```
-
-Source: [`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
-
-web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.

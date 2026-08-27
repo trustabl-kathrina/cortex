@@ -2619,32 +2619,6 @@ export interface Config {
 
 Source: [`packages/todo/tool-todo/src/index.ts:29`](../packages/todo/tool-todo/src/index.ts)
 
-<a id="cortextool-web"></a>
-
-## `@cortex/tool-web`
-
-Requires: `tools` · `web` · `systemPrompt`
-
-```ts config-catalog
-/** Plugin config: which web tools to register, the source cap, per-tool budgets, and the fetch output cap. */
-export interface Config {
-  /** Register `web_search`. Defaults to true. */
-  search?: boolean
-  /** Register `web_fetch`. Defaults to true. */
-  fetch?: boolean
-  /** Upper bound on sources returned by one `web_search` call. */
-  searchMaxResults?: number
-  /** Cooperative timeout budget (ms) for `web_fetch`. Defaults to 30000. */
-  fetchTimeoutMs?: number
-  /** Cooperative timeout budget (ms) for `web_search`. Defaults to 30000. */
-  searchTimeoutMs?: number
-  /** Cap on source characters converted and complete `web_fetch` output characters. Defaults to 200000. */
-  fetchMaxOutputChars?: number
-}
-```
-
-Source: [`packages/web/tool-web/src/index.ts:37`](../packages/web/tool-web/src/index.ts)
-
 <a id="cortextool-workflow"></a>
 
 ## `@cortex/tool-workflow`
@@ -2746,27 +2720,6 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 Source: [`packages/interaction/user-approval/src/index.ts:177`](../packages/interaction/user-approval/src/index.ts)
 
-<a id="cortexweb"></a>
-
-## `@cortex/web`
-
-```ts config-catalog
-/**
- * Config for the web seam. `searchProvider` / `fetchProvider` pin which provider
- * wins for each capability; both are optional (a single registered usable
- * provider auto-selects). Operational overrides such as environment variables
- * must feed these same fields rather than introduce a hidden priority chain.
- */
-export interface WebRuntimeConfig {
-  /** Explicit search provider id. Omitted = auto-select when exactly one usable. */
-  readonly searchProvider?: string
-  /** Explicit fetch provider id. Omitted = auto-select when exactly one usable. */
-  readonly fetchProvider?: string
-}
-```
-
-Source: [`packages/web/web/src/index.ts:55`](../packages/web/web/src/index.ts)
-
 <a id="cortexweb-app"></a>
 
 ## `@cortex/web-app`
@@ -2795,80 +2748,6 @@ export interface Config {
 ```
 
 Source: [`packages/bundle/web-app/src/index.ts:43`](../packages/bundle/web-app/src/index.ts)
-
-<a id="cortexweb-fetch-http"></a>
-
-## `@cortex/web-fetch-http`
-
-Requires: `web`
-
-```ts config-catalog
-/** Plugin config: the provider's transport and size limits plus its `User-Agent` (all defaulted). */
-export interface Config {
-  /** Maximum accepted request URL length. */
-  maxUrlLength?: number
-  /** Maximum response body size in bytes. */
-  maxResponseBytes?: number
-  /** Maximum decoded body length in characters. */
-  maxBodyChars?: number
-  /** Default fetch timeout in milliseconds, within Node's timer range. */
-  timeoutMs?: number
-  /** Maximum number of same-origin redirect hops to follow. */
-  maxRedirects?: number
-  /** `User-Agent` header sent on every request. */
-  userAgent?: string
-}
-```
-
-Source: [`packages/web/web-fetch-http/src/index.ts:34`](../packages/web/web-fetch-http/src/index.ts)
-
-<a id="cortexweb-search-exa"></a>
-
-## `@cortex/web-search-exa`
-
-Requires: `web`
-
-```ts config-catalog
-/** Plugin config (all optional — `apply` fills env-var and constant defaults). */
-export interface Config {
-  /** Exa API key. Falls back to `$EXA_API_KEY`. Empty → provider unavailable. */
-  apiKey?: string
-  /** Endpoint base; `/search` is appended. Defaults to the public API. */
-  baseURL?: string
-  /** Retrieval mode sent as Exa's `type`. Defaults to `auto`. */
-  searchType?: 'auto' | 'keyword' | 'neural'
-  /** Default result count when a request carries no `maxResults`. Omitted = none. */
-  numResults?: number
-  /** Highlight sentences requested per result. Defaults to 1. */
-  highlightsPerResult?: number
-}
-```
-
-Source: [`packages/web/web-search-exa/src/index.ts:38`](../packages/web/web-search-exa/src/index.ts)
-
-<a id="cortexweb-search-perplexity"></a>
-
-## `@cortex/web-search-perplexity`
-
-Requires: `web`
-
-```ts config-catalog
-/** Plugin config (all optional — `apply` fills env-var and constant defaults). */
-export interface Config {
-  /** Perplexity API key. Falls back to `$PERPLEXITY_API_KEY`. Empty → unavailable. */
-  apiKey?: string
-  /** Endpoint base; `/chat/completions` is appended. Defaults to the public API. */
-  baseURL?: string
-  /** Search model name. Defaults to `sonar`. */
-  model?: string
-  /** Upper bound on generated answer tokens. Defaults to 1024. */
-  maxTokens?: number
-  /** Recency window sent as `search_recency_filter`. Omitted = no filter. */
-  searchRecency?: 'day' | 'week' | 'month' | 'year'
-}
-```
-
-Source: [`packages/web/web-search-perplexity/src/index.ts:32`](../packages/web/web-search-perplexity/src/index.ts)
 
 <a id="cortexworkflow-worker-thread"></a>
 

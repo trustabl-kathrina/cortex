@@ -104,14 +104,12 @@
     "@cortex/tool-subagent-control": "workspace:^",
     "@cortex/tool-subagent-report": "workspace:^",
     "@cortex/tool-todo": "workspace:^",
-    "@cortex/tool-web": "workspace:^",
     "@cortex/tool-workflow": "workspace:^",
     "@cortex/tools": "workspace:^",
     "@cortex/typert-loader": "workspace:^",
     "@cortex/typert-registry": "workspace:^",
     "@cortex/user-approval": "workspace:^",
     "@cortex/user-questions": "workspace:^",
-    "@cortex/web": "workspace:^",
     "@cortex/workflow-worker-thread": "workspace:^"
   },
   "peerDependencies": {
