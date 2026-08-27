@@ -16,6 +16,8 @@ import { Button, IconPlusOutline16, Modal } from '@cortex/client-ui-primitives'
 import type { SnapshotSelectorHook } from '@cortex/client-web-react'
 import { CustomProviderCard } from './CustomProviderCard.tsx'
 import { deriveKeyRef, messageOf, protocolChoices } from './store.ts'
+import { getPath } from '@cortex/client-schema-form'
+import { PROVIDER_UI_LOCKDOWN, lockedProtocolChoices, rowLocked } from './lockdown.ts'
 import type { ModelsSettingsState, ModelsSettingsStore, ProviderRow } from './store.ts'
 import { ProviderEditor } from './ProviderEditor.tsx'
 import type { en } from './locales.ts'
@@ -214,13 +216,20 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
   // Hand-declared routes live in the pi-ai namespace, which is also the only
   // one whose schema names the protocols one may speak; without it mounted
   // there is nothing to declare and the entry point stays disabled.
-  const protocols = protocolChoices(state.namespaces.get('llm-pi-ai'))
+  // Under the provider-UI lockdown only the OpenAI-shaped protocols are
+  // offered — the ones a local LiteLLM gateway speaks. The schema (and the
+  // adapter behind it) still accepts the full set for settings.yaml routes.
+  const protocols = lockedProtocolChoices(protocolChoices(state.namespaces.get('llm-pi-ai')))
 
   return (
     <div className={styles['section']}>
       <h2 className={styles['title']}>{t('title')}</h2>
       <p className={styles['intro']}>{t('intro')}</p>
       {!state.writable && state.status === 'ready' ? <p className={styles['notice']}>{t('readOnly')}</p> : null}
+      {/* Deployment policy: provider configuration from this UI is limited to
+          a local LiteLLM gateway. External routes stay visible and usable for
+          chat, but their mutating affordances below render disabled. */}
+      {PROVIDER_UI_LOCKDOWN && state.status === 'ready' ? <p className={styles['notice']}>{t('lockedNotice')}</p> : null}
       {savedIdentity === undefined
         ? null
         : (
@@ -234,6 +243,10 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
           const namespace = state.namespaces.get(target.settingsNs)
           /* v8 ignore next -- the join marks a row configured only when its namespace resolved */
           if (namespace === undefined) return null
+          // Locked rows keep rendering (and keep serving chat) but cannot be
+          // edited or deleted from the UI: only a profile whose baseURL points
+          // at the approved local gateway stays mutable here.
+          const locked = rowLocked(getPath(namespace.value, target.settingsPath))
           const open = !adding && editing?.provider === row.entry.provider
           const credentialConfigured = row.credential?.configured === true
           const credentialMissing = !credentialConfigured
@@ -275,6 +288,8 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
                     type="button"
                     className={styles['secondaryButton']}
                     aria-label={providerCopy(t('editProvider'), target)}
+                    disabled={locked}
+                    title={locked ? t('lockedRow') : undefined}
                     onClick={() => {
                       setSavedTarget(undefined)
                       // One card at a time: leaving `declaring` set would show
@@ -293,7 +308,8 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
                         type="button"
                         className={styles['dangerButton']}
                         aria-label={providerCopy(t('removeProvider'), target)}
-                        disabled={!state.writable}
+                        disabled={!state.writable || locked}
+                        title={locked ? t('lockedRow') : undefined}
                         onClick={() => {
                           setSavedTarget(undefined)
                           setDeleteFailure(undefined)
@@ -316,7 +332,7 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
                     namespace={namespace}
                     api={api}
                     t={t}
-                    readOnly={!state.writable}
+                    readOnly={!state.writable || locked}
                     onClose={(changed) => { closeEditor(changed, target) }}
                   />
                 )
@@ -385,10 +401,14 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
               // and equal-width so they read as siblings and line up with the
               // rows above, rather than two pills of different lengths.
               <div className={styles['addActions']}>
+                {/* Catalog providers are external vendors by definition, so the
+                    adopt path is not clickable under the lockdown; the custom
+                    path beside it stays open for the local gateway. */}
                 <button
                   type="button"
                   className={styles['addButton']}
-                  disabled={addable.length === 0 || !state.writable}
+                  disabled={PROVIDER_UI_LOCKDOWN || addable.length === 0 || !state.writable}
+                  title={PROVIDER_UI_LOCKDOWN ? t('lockedAdd') : undefined}
                   onClick={() => {
                     const first = addable[0]
                     /* v8 ignore next -- the button is disabled while nothing is addable */
@@ -407,6 +427,7 @@ function Loaded({ injected }: { injected: ModelsSectionInjected }): ReactNode {
                   type="button"
                   className={styles['addButton']}
                   disabled={protocols.length === 0 || !state.writable}
+                  title={PROVIDER_UI_LOCKDOWN ? t('lockedCustomHint') : undefined}
                   onClick={() => {
                     setSavedTarget(undefined)
                     setAdding(false)

@@ -32,6 +32,7 @@ import { EditorFooter } from './EditorFooter.tsx'
 import { modelDrafts, validateCortexModels } from './model-drafts.ts'
 import { ModelListEditor } from './ModelListEditor.tsx'
 import { deriveKeyRef, messageOf, protocolChoices } from './store.ts'
+import { PROVIDER_UI_LOCKDOWN, isApprovedLocalEndpoint, lockedProtocolChoices } from './lockdown.ts'
 import type { en } from './locales.ts'
 import styles from './ModelsSection.module.css'
 
@@ -160,8 +161,13 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
   // and there cannot drift apart: both come from the adapter's own `Config`.
   // Only the pi-ai layout has a per-route protocol for the read to find, and
   // it rehydrates the whole section schema, so the hint-only layout skips it.
+  // Under the provider-UI lockdown the select offers only the OpenAI-shaped
+  // protocols (what a local LiteLLM gateway speaks); a stored profile whose
+  // protocol falls outside that set still lists its own value so the editor
+  // renders what settings.yaml actually says. The adapter itself continues to
+  // accept the full schema union for file-configured routes.
   const protocols = useMemo(
-    () => layout === 'pi-ai' ? protocolChoices(namespace) : [],
+    () => layout === 'pi-ai' ? lockedProtocolChoices(protocolChoices(namespace)) : [],
     [layout, namespace],
   )
 
@@ -213,6 +219,12 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
   // an edited-but-unsaved endpoint, and a key typed but not yet stored.
   const probeApi = stringAt(draft, 'api') ?? stringAt(fallback, 'api')
   const probeBaseURL = stringAt(draft, 'baseURL') ?? stringAt(fallback, 'baseURL')
+  // Deployment lockdown: an editable route's endpoint must stay on the
+  // approved local gateway. Empty means "inherit" and is judged by the row
+  // gate in ModelsSection, so only a present, non-local value blocks.
+  const endpointBlocked = PROVIDER_UI_LOCKDOWN
+    && probeBaseURL !== undefined && probeBaseURL.length > 0
+    && !isApprovedLocalEndpoint(probeBaseURL)
   const probe = {
     settingsNs: namespace.ns,
     // Naming the route lets an adapter that already describes it answer from
@@ -393,6 +405,7 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
                 }}
               />
             </div>
+            {endpointBlocked ? <p className={styles['error']}>{t('lockedEndpoint')}</p> : null}
             {/* The protocol sits beside the endpoint it describes, as it does
                 on the create card. */}
             {ownsIdentity
@@ -413,6 +426,9 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
                         reader announces it either way, and an empty one is
                         announced as a choice with no identity. */}
                     {probeApi === undefined ? <option value="">{t('customApiUnset')}</option> : null}
+                    {probeApi !== undefined && !protocols.includes(probeApi)
+                      ? <option value={probeApi}>{probeApi}</option>
+                      : null}
                     {protocols.map(choice => <option key={choice} value={choice}>{choice}</option>)}
                   </select>
                 </div>
@@ -462,6 +478,7 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
         t={t}
         busy={busy}
         submitDisabled={disabled || layout === 'unknown'
+          || endpointBlocked
           || (props.credentialOnly !== true && modelFailure !== undefined)
           || shownKeyFailure !== undefined
           || (props.credentialRequired === true && keyValue.length === 0)}

@@ -13,6 +13,11 @@
  * metadata the surface offers for adoption. `settings.yaml` remains the only
  * thing that decides what a route serves.
  *
+ * PROVIDER-UI LOCKDOWN NOTE: discovery stays fully functional for any
+ * endpoint an administrator configures. Under the client-side lockdown
+ * (packages/client/ui-settings-models/src/client/lockdown.ts) the UI only reaches this
+ * for localhost LiteLLM gateways, but nothing here enforces that — by design.
+ *
  * Only OpenAI-compatible protocols are interrogated. Their listing is the one
  * shape a gateway, a self-hosted server, and the official endpoints all agree
  * on, which is the case this action exists for; every other protocol reports

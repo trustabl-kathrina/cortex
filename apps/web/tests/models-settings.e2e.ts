@@ -1,18 +1,20 @@
 // Web e2e scenario: the Models settings page end to end through the real
-// wire — the add card offers the dormant pi-ai catalog, a blank key saves a
-// reference-free profile for provider-native auth, and typing an API key later
-// stores it write-only under the derived reference (`MISTRAL_API_KEY`)
-// while the settings document records only that reference. Each saved row
-// appears after route topology invalidation without presenting liveness as
-// provider status. The customized-settings fold writes its curated fields —
-// the endpoint, and a declared route's own name and protocol — as merge
-// patches against the stored profile. Zero model calls: configuration is pure
-// settings/credentials/llm-domain traffic, so there is no fixture and a
-// stray stream would fail loud because the adapter registry is empty. The provider under test is
-// mistral so a developer's real ANTHROPIC/OPENAI environment keys can
-// never shadow the derived reference. The deletion dialog distinguishes a
-// reference-free profile from a page-managed key before the credential and
-// settings unsets reach the wire.
+// wire, under the provider-UI lockdown (ui-settings-models/src/client/lockdown.ts).
+// The catalog add path renders disabled with the policy notice; the one
+// configurable thing is a hand-declared local LiteLLM gateway. The custom card
+// refuses an external endpoint and accepts the localhost one; a blank key
+// saves a reference-free profile for gateway-native auth, and typing an API
+// key later stores it write-only under the derived reference
+// (`LITELLM_API_KEY`) while the settings document records only that
+// reference. The customized-settings fold writes its curated fields — the
+// endpoint, and the declared route's own name and protocol (OpenAI-shaped
+// only: the lockdown narrows the select, while the schema keeps accepting the
+// full union for settings.yaml routes) — as merge patches against the stored
+// profile. Zero model calls: configuration is pure settings/credentials/
+// llm-domain traffic, so there is no fixture and a stray stream would fail
+// loud because the adapter registry is empty. The deletion dialog
+// distinguishes a reference-free profile from a page-managed key before the
+// credential and settings unsets reach the wire.
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
@@ -34,7 +36,7 @@ const NATIVE_DELETE_EXPECTED = join(SNAPSHOT_DIR, 'native-delete.expected.md')
 const DELETE_EXPECTED = join(SNAPSHOT_DIR, 'delete.expected.md')
 const MODE = webSnapshotMode()
 
-describe('web e2e: Models settings page configures a dormant provider', () => {
+describe('web e2e: Models settings page configures only the local gateway', () => {
   let scaffold: WebScaffold
   let browser: Browser
   let page: Page
@@ -54,75 +56,83 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
     await scaffold?.close()
   })
 
-  it('opens the add card over the dormant directory vocabulary', async () => {
+  it('locks the catalog add path behind the policy notice', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-empty'))
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Settings' })
     await dialog.waitFor({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Models', exact: true }).click()
     await dialog.getByText('Enter your API keys to use models from the following providers.').waitFor({ timeout: 10_000 })
-    // The dormant pi-ai adapter contributes its offered installed catalog; no
-    // provider is configured yet, so the page is one add button.
+    // The lockdown notice names the one thing this page may configure.
+    await dialog.getByText(/only a local LiteLLM gateway/).waitFor({ timeout: 10_000 })
+    // The dormant pi-ai catalog still exists behind the wire, but adopting a
+    // vendor from it is not clickable under the lockdown.
     const add = dialog.getByRole('button', { name: 'Add provider', exact: true })
     await add.waitFor({ timeout: 10_000 })
-    // The button enables once the dormant catalog lands in the join.
-    await expect.poll(async () => add.isEnabled(), { timeout: 10_000 }).toBe(true)
-    await add.click()
-    const pick = dialog.getByLabel('Provider', { exact: true })
-    await pick.waitFor({ timeout: 10_000 })
-    await expect.poll(async () => pick.locator('option').count(), { timeout: 10_000 }).toBeGreaterThan(15)
-    const options = await pick.locator('option').allTextContents()
-    expect(options).toContain('anthropic')
-    expect(options).toContain('mistral')
-    await pick.selectOption('mistral')
-    await dialog.getByRole('textbox', { name: 'API key', exact: true }).waitFor({ timeout: 10_000 })
+    expect(await add.isEnabled()).toBe(false)
+    // The custom path stays open — it is how the local gateway is declared.
+    const declare = dialog.getByRole('button', { name: 'Add a custom provider', exact: true })
+    await expect.poll(async () => declare.isEnabled(), { timeout: 10_000 }).toBe(true)
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(EMPTY_EXPECTED, snapshot, MODE)
   }, 60_000)
 
-  it('refuses a key no HTTP header can carry before anything is written', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-models-illegal-key'))
+  it('refuses an external endpoint and a key no HTTP header can carry', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-models-declare-guards'))
     const dialog = page.getByRole('dialog', { name: 'Settings' })
-    const key = dialog.getByLabel('API key', { exact: true })
-    const save = dialog.getByRole('button', { name: 'Apply', exact: true })
+    await dialog.getByRole('button', { name: 'Add a custom provider', exact: true }).click()
+    await dialog.getByLabel('Provider ID').fill('litellm')
+    await dialog.getByLabel('Display name', { exact: true }).fill('LiteLLM')
+    await dialog.getByRole('button', { name: 'Add model', exact: true }).click()
+    await dialog.getByLabel('Model ID 1', { exact: true }).fill('gpt-local')
+    const create = dialog.getByRole('button', { name: 'Create provider', exact: true })
+
+    // An external gateway is refused where it is typed, before any write.
+    await dialog.getByLabel('Base URL', { exact: true }).fill('https://gateway.acme.example/v1')
+    await dialog.getByText(/Only a localhost LiteLLM endpoint/).waitFor({ timeout: 10_000 })
+    await expect.poll(async () => create.isEnabled(), { timeout: 10_000 }).toBe(false)
+    await dialog.getByLabel('Base URL', { exact: true }).fill('http://127.0.0.1:4000/v1')
+    expect(await dialog.getByText(/Only a localhost LiteLLM endpoint/).count()).toBe(0)
 
     // A key no HTTP header can carry would save cleanly and fail the first
-    // turn with a ByteString TypeError; the form names the offending field
-    // instead.
-    await key.fill('sk-\u{1F600}mistral')
+    // turn with a ByteString TypeError; the form names the offending field.
+    const key = dialog.getByLabel('API key', { exact: true })
+    await key.fill('sk-\u{1F600}litellm')
     await dialog.getByText('This API key is not in a valid format. Please check it.').waitFor({ timeout: 10_000 })
-    await expect.poll(async () => save.isEnabled(), { timeout: 10_000 }).toBe(false)
-
-    // Clearing it restores submit: an empty field means "keep what is stored",
-    // never a refusal, or editing any other setting would demand the key.
+    await expect.poll(async () => create.isEnabled(), { timeout: 10_000 }).toBe(false)
     await key.fill('')
-    await expect.poll(async () => save.isEnabled(), { timeout: 10_000 }).toBe(true)
-    expect(await dialog.getByText('This API key is not in a valid format. Please check it.').count()).toBe(0)
+    await expect.poll(async () => create.isEnabled(), { timeout: 10_000 }).toBe(true)
   }, 60_000)
 
-  it('saves a blank key as a reference-free provider-native profile', async () => {
+  it('creates the local gateway keyless as a reference-free profile', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-native-auth'))
     const dialog = page.getByRole('dialog', { name: 'Settings' })
-    await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
-    const row = dialog.getByText('mistral', { exact: true }).first()
+    await dialog.getByRole('button', { name: 'Create provider', exact: true }).click()
+    const row = dialog.getByText('LiteLLM', { exact: true }).first()
     await row.waitFor({ timeout: 10_000 })
-    await dialog.getByText('Saved mistral.', { exact: true }).waitFor({ timeout: 10_000 })
+    // The tag follows the adapter's installed catalog: this route is in none.
+    const rowCard = dialog.locator('li').filter({ hasText: 'LiteLLM' }).first()
+    await expect.poll(async () => rowCard.getByText('Custom', { exact: true }).count(), { timeout: 10_000 }).toBe(1)
     expect(await dialog.getByRole('img', { name: 'API key configured' }).count()).toBe(0)
     expect(await dialog.getByRole('img', { name: 'API key missing' }).count()).toBe(0)
     const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
-    expect(document).toContain('mistral: {}')
-    expect(document).not.toContain('MISTRAL_API_KEY')
+    expect(document).toContain('litellm:')
+    expect(document).toContain('baseURL: http://127.0.0.1:4000/v1')
+    expect(document).not.toContain('LITELLM_API_KEY')
+    const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
+    await compareOrRefreshGolden(DECLARED_EXPECTED, snapshot, MODE)
+    expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
   it('describes reference-free deletion without claiming a credential exists', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-native-delete'))
     const settingsDialog = page.getByRole('dialog', { name: 'Settings' })
-    await settingsDialog.getByRole('button', { name: 'Delete mistral', exact: true }).click()
-    const deleteDialog = page.getByRole('dialog', { name: 'Delete mistral?' })
+    await settingsDialog.getByRole('button', { name: 'Delete LiteLLM (litellm)', exact: true }).click()
+    const deleteDialog = page.getByRole('dialog', { name: 'Delete LiteLLM (litellm)?' })
     await deleteDialog.waitFor({ timeout: 10_000 })
     const snapshot = await captureStableAria(
       page,
-      '[role="dialog"][aria-label="Delete mistral?"]',
+      '[role="dialog"][aria-label="Delete LiteLLM (litellm)?"]',
       scaffold.workspaceCwd,
     )
     await compareOrRefreshGolden(NATIVE_DELETE_EXPECTED, snapshot, MODE)
@@ -132,144 +142,118 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
   it('stores the key under the derived reference and keeps the route live', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-add'))
     const dialog = page.getByRole('dialog', { name: 'Settings' })
-    await dialog.getByRole('button', { name: 'Edit mistral', exact: true }).click()
-    await dialog.getByRole('textbox', { name: 'API key', exact: true }).fill('sk-e2e-mistral')
+    await dialog.getByRole('button', { name: 'Edit LiteLLM (litellm)', exact: true }).click()
+    await dialog.getByRole('textbox', { name: 'API key', exact: true }).fill('sk-e2e-litellm')
     await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
     // The profile lands in settings.yaml with only the derived reference, the
-    // key value lands in the harness home's .credentials.yaml, the dormant route
-    // registers, and the topology frame invalidates the page into the row.
+    // key value lands in the harness home's .credentials.yaml, and the
+    // topology frame invalidates the page into the row.
     await expect.poll(
       async () => dialog.getByRole('textbox', { name: 'API key', exact: true }).count(),
       { timeout: 10_000 },
     ).toBe(0)
     await dialog.getByRole('img', { name: 'API key configured' }).waitFor({ timeout: 10_000 })
-    await dialog.getByText('Saved mistral.', { exact: true }).waitFor({ timeout: 10_000 })
+    await dialog.getByText('Saved LiteLLM (litellm).', { exact: true }).waitFor({ timeout: 10_000 })
     const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
-    expect(document).toContain('mistral:')
-    expect(document).toContain('apiKeyEnv: MISTRAL_API_KEY')
-    expect(document).not.toContain('sk-e2e-mistral')
+    expect(document).toContain('litellm:')
+    expect(document).toContain('apiKeyEnv: LITELLM_API_KEY')
+    expect(document).not.toContain('sk-e2e-litellm')
     const credentialFile = join(scaffold.harnessHome, '.credentials.yaml')
     await expect.poll(
       async () => readFile(credentialFile, 'utf8').catch(() => ''),
       { timeout: 10_000 },
-    ).toContain('MISTRAL_API_KEY: sk-e2e-mistral')
-    expect(await page.content()).not.toContain('sk-e2e-mistral')
+    ).toContain('LITELLM_API_KEY: sk-e2e-litellm')
+    expect(await page.content()).not.toContain('sk-e2e-litellm')
   }, 60_000)
 
-  it('applies a customized-settings field as a merge patch', async () => {
+  it('applies a customized-settings field as a merge patch, still localhost-only', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-customized'))
     const dialog = page.getByRole('dialog', { name: 'Settings' })
-    await dialog.getByRole('button', { name: 'Edit mistral', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Edit LiteLLM (litellm)', exact: true }).click()
     await dialog.getByText('Customized settings').click()
     const url = dialog.getByLabel('Base URL', { exact: true })
     await url.waitFor({ timeout: 10_000 })
-    await url.fill('https://gateway.mistral.example/v1')
-    await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
+    // The lockdown holds in the editor too: an external endpoint blocks the
+    // apply where it is typed.
+    await url.fill('https://gateway.litellm.example/v1')
+    await dialog.getByText(/Only a localhost LiteLLM endpoint/).waitFor({ timeout: 10_000 })
+    const save = dialog.getByRole('button', { name: 'Apply', exact: true })
+    await expect.poll(async () => save.isEnabled(), { timeout: 10_000 }).toBe(false)
+    await url.fill('http://127.0.0.1:4100/v1')
+    await expect.poll(async () => save.isEnabled(), { timeout: 10_000 }).toBe(true)
+    await save.click()
     // The editor closes back to the row; the fold's write merged into the
     // stored profile beside the reference.
     await expect.poll(async () => dialog.getByLabel('Base URL', { exact: true }).count(), { timeout: 10_000 }).toBe(0)
-    await dialog.getByText('Saved mistral.', { exact: true }).waitFor({ timeout: 10_000 })
+    await dialog.getByText('Saved LiteLLM (litellm).', { exact: true }).waitFor({ timeout: 10_000 })
     const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
-    expect(document).toContain('baseURL: https://gateway.mistral.example/v1')
-    expect(document).toContain('apiKeyEnv: MISTRAL_API_KEY')
+    expect(document).toContain('baseURL: http://127.0.0.1:4100/v1')
+    expect(document).toContain('apiKeyEnv: LITELLM_API_KEY')
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(CONFIGURED_EXPECTED, snapshot, MODE)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
-  it('declares a route the adapter does not ship', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-models-declare'))
-    const dialog = page.getByRole('dialog', { name: 'Settings' })
-    const declare = dialog.getByRole('button', { name: 'Add a custom provider', exact: true })
-    await expect.poll(async () => declare.isEnabled(), { timeout: 10_000 }).toBe(true)
-    await declare.click()
-    await dialog.getByLabel('Provider ID').fill('acme-gateway')
-    await dialog.getByLabel('Display name', { exact: true }).fill('Acme Gateway')
-    await dialog.getByLabel('Base URL', { exact: true }).fill('https://gateway.acme.example/v1')
-    // No reasoning effort on a provider card at all: effort is a per-model
-    // capability, the models under one provider disagree about it, and a
-    // switch in the composer already records provider+model+effort together.
-    expect(await dialog.getByLabel('Reasoning effort').count()).toBe(0)
-    await dialog.getByRole('button', { name: 'Add model', exact: true }).click()
-    await dialog.getByLabel('Model ID 1', { exact: true }).fill('acme-large')
-    await dialog.getByRole('button', { name: 'Create provider', exact: true }).click()
-
-    const row = dialog.getByText('Acme Gateway', { exact: true }).first()
-    await row.waitFor({ timeout: 10_000 })
-    const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
-    expect(document).toContain('acme-gateway:')
-
-    // The tag follows the adapter's installed catalog: this route is in no
-    // catalog, while mistral is — even though both now have profiles.
-    const rowCard = (name: string) => dialog.locator('li').filter({ hasText: name }).first()
-    await expect.poll(async () => rowCard('Acme Gateway').getByText('Custom', { exact: true }).count(), { timeout: 10_000 }).toBe(1)
-    expect(await rowCard('mistral').getByText('Custom', { exact: true }).count()).toBe(0)
-
-    const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
-    await compareOrRefreshGolden(DECLARED_EXPECTED, snapshot, MODE)
-    expect(tripwire.pageErrors).toEqual([])
-  }, 60_000)
-
-  it('reopens the name and protocol a declared route was created with', async () => {
+  it('reopens the name and protocol, offering only the OpenAI-shaped choices', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-declared-identity'))
     const dialog = page.getByRole('dialog', { name: 'Settings' })
-    await dialog.getByRole('button', { name: 'Edit Acme Gateway (acme-gateway)', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Edit LiteLLM (litellm)', exact: true }).click()
     await dialog.getByText('Customized settings').click()
     // The create card asked this route for a name and a protocol because
-    // nothing can default them; the editor reaches the same two fields rather
-    // than sending the user to settings.yaml for what only this route names.
+    // nothing can default them; the editor reaches the same two fields.
     const protocol = dialog.getByLabel('API protocol', { exact: true })
     await protocol.waitFor({ timeout: 10_000 })
     expect(await protocol.inputValue()).toBe('openai-completions')
+    // Under the lockdown the select narrows to what LiteLLM speaks; the
+    // schema (and settings.yaml) still accepts the full union.
+    const options = await protocol.locator('option').allTextContents()
+    expect(options).toContain('openai-responses')
+    expect(options).not.toContain('anthropic-messages')
     const name = dialog.getByLabel('Display name', { exact: true })
-    expect(await name.inputValue()).toBe('Acme Gateway')
+    expect(await name.inputValue()).toBe('LiteLLM')
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(DECLARED_EDIT_EXPECTED, snapshot, MODE)
 
-    await protocol.selectOption('anthropic-messages')
-    await name.fill('Acme Relay')
+    await protocol.selectOption('openai-responses')
+    await name.fill('LiteLLM Relay')
     await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
     await expect.poll(async () => dialog.getByLabel('API protocol', { exact: true }).count(), { timeout: 10_000 }).toBe(0)
-    // The adapter re-resolved the route under the new protocol and re-registered
-    // it under the new name: an unserviceable profile would have been refused
-    // at the write instead, and a rename that did not re-register would leave
-    // the old label on the row.
-    await dialog.getByText('Acme Relay', { exact: true }).first().waitFor({ timeout: 10_000 })
-    // The status line names the route as the refreshed directory reports it;
-    // the target captured when the card opened still carries the old name.
-    await dialog.getByText('Saved Acme Relay (acme-gateway).', { exact: true }).waitFor({ timeout: 10_000 })
+    // The adapter re-resolved the route under the new protocol and
+    // re-registered it under the new name.
+    await dialog.getByText('LiteLLM Relay', { exact: true }).first().waitFor({ timeout: 10_000 })
+    await dialog.getByText('Saved LiteLLM Relay (litellm).', { exact: true }).waitFor({ timeout: 10_000 })
     const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
-    expect(document).toContain('api: anthropic-messages')
-    expect(document).toContain('displayName: Acme Relay')
+    expect(document).toContain('api: openai-responses')
+    expect(document).toContain('displayName: LiteLLM Relay')
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
   it('confirms an identified provider deletion before removing its profile and key', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-delete'))
     const settingsDialog = page.getByRole('dialog', { name: 'Settings' })
-    await settingsDialog.getByRole('button', { name: 'Delete mistral', exact: true }).click()
-    const deleteDialog = page.getByRole('dialog', { name: 'Delete mistral?' })
+    await settingsDialog.getByRole('button', { name: 'Delete LiteLLM Relay (litellm)', exact: true }).click()
+    const deleteDialog = page.getByRole('dialog', { name: 'Delete LiteLLM Relay (litellm)?' })
     await deleteDialog.waitFor({ timeout: 10_000 })
     const snapshot = await captureStableAria(
       page,
-      '[role="dialog"][aria-label="Delete mistral?"]',
+      '[role="dialog"][aria-label="Delete LiteLLM Relay (litellm)?"]',
       scaffold.workspaceCwd,
     )
     await compareOrRefreshGolden(DELETE_EXPECTED, snapshot, MODE)
 
     await deleteDialog.getByRole('button', { name: 'Cancel', exact: true }).click()
-    expect(await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')).toContain('mistral:')
-    await settingsDialog.getByRole('button', { name: 'Delete mistral', exact: true }).click()
-    await page.getByRole('dialog', { name: 'Delete mistral?' })
-      .getByRole('button', { name: 'Delete mistral', exact: true }).click()
+    expect(await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')).toContain('litellm:')
+    await settingsDialog.getByRole('button', { name: 'Delete LiteLLM Relay (litellm)', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Delete LiteLLM Relay (litellm)?' })
+      .getByRole('button', { name: 'Delete LiteLLM Relay (litellm)', exact: true }).click()
     await expect.poll(
       async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'),
       { timeout: 10_000 },
-    ).not.toContain('mistral:')
+    ).not.toContain('litellm:')
     expect(await readFile(join(scaffold.harnessHome, '.credentials.yaml'), 'utf8'))
-      .not.toContain('MISTRAL_API_KEY')
+      .not.toContain('LITELLM_API_KEY')
     await expect.poll(
-      async () => page.getByRole('dialog', { name: 'Delete mistral?' }).count(),
+      async () => page.getByRole('dialog', { name: 'Delete LiteLLM Relay (litellm)?' }).count(),
       { timeout: 10_000 },
     ).toBe(0)
     await page.keyboard.press('Escape')

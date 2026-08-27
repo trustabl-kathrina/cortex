@@ -27,6 +27,7 @@ const PiAiConfig = Schema.object({
   providers: Schema.dict(Schema.object({
     apiKeyEnv: Schema.string().role('credential-ref'),
     baseURL: Schema.string(),
+    api: Schema.union(['openai-completions', 'openai-responses', 'anthropic-messages']),
     reasoning: Schema.union(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']),
     headers: Schema.dict(Schema.string()),
   })),
@@ -47,8 +48,8 @@ function wireNamespaces(): SettingsNamespaceView[] {
     {
       ns: 'llm-pi-ai',
       schema: JSON.parse(JSON.stringify(PiAiConfig.toJSON())) as unknown,
-      value: { providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'https://proxy', headers: { 'X-Team': 'a' } }, zombie: {} } },
-      user: { providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'https://proxy', headers: { 'X-Team': 'a' } }, zombie: {} } },
+      value: { providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'http://127.0.0.1:4000', headers: { 'X-Team': 'a' } }, zombie: { baseURL: 'http://127.0.0.1:4009' } } },
+      user: { providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'http://127.0.0.1:4000', headers: { 'X-Team': 'a' } }, zombie: { baseURL: 'http://127.0.0.1:4009' } } },
       applies: 'live',
       secrets: [],
       revision: 0,
@@ -255,8 +256,10 @@ describe('ModelsSection', () => {
     expect(mutate).not.toHaveBeenCalled()
     await waitFor(() => { expect(face.settings.describe.mock.calls.length).toBeGreaterThan(1) })
     expect((await screen.findByRole('status')).textContent).toBe(openaiCopy(en.savedProvider))
-    // Opening another card retires the notice.
-    fireEvent.click(screen.getByText(en.add))
+    // Opening another card retires the notice. The catalog add button is
+    // disabled under the provider lockdown, so reopening the row's editor is
+    // the click that clears it.
+    fireEvent.click(screen.getByRole('button', { name: openaiCopy(en.editProvider) }))
     expect(screen.queryByRole('status')).toBeNull()
   })
 
@@ -435,7 +438,7 @@ describe('ModelsSection', () => {
     // A whole-section replace would clobber sibling overrides to clear one field.
     const { replace, update, mutate } = await mountOpenaiCard()
     const url = screen.getByLabelText<HTMLInputElement>(en.baseUrl)
-    expect(url.value).toBe('https://proxy')
+    expect(url.value).toBe('http://127.0.0.1:4000')
     fireEvent.change(url, { target: { value: '' } })
     expect(url.value).toBe('')
     fireEvent.click(screen.getByText(en.apply))
@@ -480,119 +483,35 @@ describe('ModelsSection', () => {
     // the effective profile endpoint as its placeholder source.
     fireEvent.click(screen.getByText(en.customized))
     const url = screen.getByLabelText<HTMLInputElement>(en.baseUrl)
-    expect(url.value).toBe('https://proxy')
-    fireEvent.change(url, { target: { value: 'https://proxy/v2' } })
+    expect(url.value).toBe('http://127.0.0.1:4000')
+    fireEvent.change(url, { target: { value: 'http://127.0.0.1:4000/v2' } })
     fireEvent.click(screen.getByText(en.apply))
     await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
     // Only the edited field travels: apiKeyEnv and headers were already stored
     // with these values, so no op restates them.
     expect(mutate.mock.calls[0]?.[0]).toEqual({
       ns: 'llm-pi-ai',
-      ops: [{ op: 'set', path: ['providers', 'openai', 'baseURL'], value: 'https://proxy/v2' }],
+      ops: [{ op: 'set', path: ['providers', 'openai', 'baseURL'], value: 'http://127.0.0.1:4000/v2' }],
       expectedRevision: 0,
     })
   })
 
-  it('adds a dormant provider with a derived reference and stores its key', async () => {
-    const { mutate, set } = await mountSection()
-    fireEvent.click(screen.getByText(en.add))
-    const pick = await screen.findByLabelText<HTMLSelectElement>(en.provider)
-    expect([...pick.options].map(option => option.value)).toEqual(['anthropic', 'broken', 'plain'])
-    expect(pick.value).toBe('anthropic')
-    // A dormant profile has no endpoint anywhere: the pi-ai placeholder
-    // falls back to the provider-default wording.
-    fireEvent.click(screen.getByText(en.customized))
-    expect(screen.getByLabelText<HTMLInputElement>(en.baseUrl).placeholder).toBe(en.baseUrlDefault)
-    const addKey = screen.getByLabelText<HTMLInputElement>(en.keyInput)
-    expect(addKey.placeholder).toBe(en.keyPlaceholderNative)
-    fireEvent.change(addKey, { target: { value: 'sk-ant' } })
-    fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
-    expect(mutate.mock.calls[0]?.[0]).toEqual({
-      ns: 'llm-pi-ai',
-      ops: [{ op: 'set', path: ['providers', 'anthropic', 'apiKeyEnv'], value: 'ANTHROPIC_API_KEY' }],
-      expectedRevision: 0,
-    })
-    await waitFor(() => { expect(set).toHaveBeenCalledWith({ ref: 'ANTHROPIC_API_KEY', value: 'sk-ant' }) })
-  })
-
-  it('keeps pi-ai provider-native authentication when no key is entered', async () => {
-    const { mutate, set } = await mountSection()
-    fireEvent.click(screen.getByText(en.add))
-    await screen.findByLabelText(en.provider)
-    fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(mutate).toHaveBeenCalledOnce() })
-    expect(mutate.mock.calls[0]?.[0]).toEqual({
-      ns: 'llm-pi-ai',
-      ops: [{ op: 'set', path: ['providers', 'anthropic'], value: {} }],
-      expectedRevision: 0,
-    })
-    expect(set).not.toHaveBeenCalled()
-  })
-
-  it('retries only the credential after refreshed settings already committed', async () => {
-    const committed = piAiView()
-    const afterSettings: SettingsNamespaceView = {
-      ...committed,
-      value: { providers: {
-        ...(committed.value as { providers: object }).providers,
-        anthropic: { apiKeyEnv: 'ANTHROPIC_API_KEY' },
-      } },
-      user: { providers: {
-        ...(committed.user as { providers: object }).providers,
-        anthropic: { apiKeyEnv: 'ANTHROPIC_API_KEY' },
-      } },
-      revision: 1,
-    }
-    const mutate = vi.fn(() => Promise.resolve(ok(afterSettings)))
-    const set = vi.fn()
-      .mockResolvedValueOnce(fail('credential store unavailable', 'credential-rejected'))
-      .mockResolvedValueOnce(ok({}))
-    const { face, controller } = await mountSection({ mutate, set })
-    fireEvent.click(screen.getByText(en.add))
-    await screen.findByLabelText(en.provider)
-    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.keyInput), { target: { value: 'sk-ant' } })
-    fireEvent.click(screen.getByText(en.apply))
-    await screen.findByText('credential store unavailable')
-    expect(mutate).toHaveBeenCalledOnce()
-    face.settings.describe.mockResolvedValue(ok({
-      writable: true,
-      hasDocument: false,
-      namespaces: wireNamespaces().map(namespace => namespace.ns === 'llm-pi-ai' ? afterSettings : namespace),
-    }))
-    await act(async () => { await controller.load() })
-    expect(controller.store.getSnapshot().namespaces.get('llm-pi-ai')?.revision).toBe(1)
-    fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(set).toHaveBeenCalledTimes(2) })
-    expect(mutate).toHaveBeenCalledOnce()
-    expect(set).toHaveBeenLastCalledWith({ ref: 'ANTHROPIC_API_KEY', value: 'sk-ant' })
-  })
-
-  it('switches the add card target and degrades unknown or broken targets loudly', async () => {
+  // Provider lockdown (see src/client/lockdown.ts): the catalog add path is
+  // not clickable — only a local LiteLLM gateway may be configured from this
+  // page. The former add-card flow tests were removed with the affordance;
+  // the branch itself stays in the code for deployments that flip the flag.
+  it('renders the lockdown notice and disables the catalog add path', async () => {
     await mountSection()
-    fireEvent.click(screen.getByText(en.add))
-    const pick = await screen.findByLabelText<HTMLSelectElement>(en.provider)
-    fireEvent.change(pick, { target: { value: 'broken' } })
-    await screen.findByText(/unresolvable settings path/)
-    fireEvent.change(pick, { target: { value: 'plain' } })
-    await waitFor(() => {
-      expect(screen.getAllByText(content => content.includes(en.advancedHint)).length).toBeGreaterThan(0)
-    })
-    // The hint-only card cannot apply anything, and offers no key field.
-    expect(screen.getByText<HTMLButtonElement>(en.apply).disabled).toBe(true)
-    expect(screen.queryAllByLabelText(en.keyInput)).toHaveLength(0)
-  })
-
-  it('surfaces a rejected settings write and never stores the key after it', async () => {
-    const { set } = await mountSection({
-      mutate: vi.fn(() => Promise.resolve(fail('llm-pi-ai: unknown pi-ai provider "bogus"'))),
-    })
-    fireEvent.click(screen.getByText(en.add))
-    await screen.findByLabelText(en.provider)
-    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.keyInput), { target: { value: 'sk-x' } })
-    fireEvent.click(screen.getByText(en.apply))
-    await screen.findByText(/unknown pi-ai provider/)
-    expect(set).not.toHaveBeenCalled()
+    const notice = screen.getByText(en.lockedNotice)
+    expect(notice).toBeTruthy()
+    const add = screen.getByText<HTMLButtonElement>(en.add)
+    expect(add.disabled).toBe(true)
+    expect(add.title).toBe(en.lockedAdd)
+    // Clicking the disabled button opens nothing.
+    fireEvent.click(add)
+    expect(screen.queryByLabelText(en.provider)).toBeNull()
+    // The custom path stays available for declaring the local gateway.
+    expect(screen.getByText<HTMLButtonElement>(en.customAdd).disabled).toBe(false)
   })
 
   it('renders the card without the stored-key hint when the credential probe rejects', async () => {
@@ -620,7 +539,7 @@ describe('ModelsSection', () => {
     const { set } = await mountOpenaiCard({
       mutate: vi.fn(() => Promise.resolve(fail('changed since it was read', 'settings-conflict'))),
     })
-    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.baseUrl), { target: { value: 'https://mine' } })
+    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.baseUrl), { target: { value: 'http://127.0.0.1:4300' } })
     fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.keyInput), { target: { value: 'sk-mine' } })
     fireEvent.click(screen.getByText(en.apply))
     await screen.findByText(en.conflict)
@@ -633,7 +552,7 @@ describe('ModelsSection', () => {
     // gets on the whole configuration plane) rejects rather than returning a
     // failed envelope: without a catch the card would stay busy forever.
     await mountOpenaiCard({ mutate: vi.fn(() => Promise.reject(new Error('connection lost'))) })
-    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.baseUrl), { target: { value: 'https://next' } })
+    fireEvent.change(screen.getByLabelText<HTMLInputElement>(en.baseUrl), { target: { value: 'http://127.0.0.1:4301' } })
     fireEvent.click(screen.getByText(en.apply))
     await screen.findByText('connection lost')
     // Not stuck in `applying…`: the finally cleared busy, so Apply is live again.
@@ -769,15 +688,6 @@ describe('ModelsSection', () => {
     fireEvent.click(screen.getByText(en.cancel))
     expect(screen.queryAllByLabelText(en.keyInput)).toHaveLength(0)
     expect(update).not.toHaveBeenCalled()
-  })
-
-  it('cancels the add card back to the add button', async () => {
-    await mountSection()
-    fireEvent.click(screen.getByText(en.add))
-    await screen.findByLabelText(en.provider)
-    fireEvent.click(screen.getByText(en.cancel))
-    await screen.findByText(en.add)
-    expect(screen.queryByLabelText(en.provider)).toBeNull()
   })
 
   it('loads on first render of an idle controller', async () => {

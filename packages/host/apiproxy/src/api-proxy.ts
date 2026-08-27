@@ -1973,6 +1973,14 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
    * unknown or invalid namespace, read-only provider, schema validation,
    * storage — becomes one `settings-rejected` carrying the seam's own message.
    */
+  // PROVIDER-UI LOCKDOWN NOTE: the Models page's restriction to a local
+  // LiteLLM gateway is intentionally NOT enforced here. This write path (and
+  // the settings.openDocument escape hatch below) continues to accept any
+  // provider configuration the schema validates — settings.yaml and this API
+  // remain the administrator's management path, and existing routes
+  // (OpenAI-compatible, Anthropic, custom gateways) must keep working. The
+  // lockdown is a client-side UX guard only:
+  // packages/client/ui-settings-models/src/client/lockdown.ts.
   async function settingsWrite(
     request: RpcRequest<unknown>,
     ns: string,

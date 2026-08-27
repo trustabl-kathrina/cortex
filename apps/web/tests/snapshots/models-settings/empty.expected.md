@@ -19,33 +19,11 @@
     - text: Close
   - heading "Models" [level=2]
   - paragraph: Enter your API keys to use models from the following providers.
+  - paragraph: "Provider setup is restricted on this deployment: only a local LiteLLM gateway (e.g. http://127.0.0.1:4000/v1) can be configured here. Other provider routes are managed by the administrator in settings.yaml."
   - list
-  - text: Provider
-  - combobox "Provider":
-    - option "amazon-bedrock"
-    - option "anthropic"
-    - option "azure-openai-responses"
-    - option "cerebras"
-    - option "cloudflare-ai-gateway"
-    - option "cloudflare-workers-ai"
-    - option "fireworks"
-    - option "github-copilot"
-    - option "google"
-    - option "google-vertex"
-    - option "groq"
-    - option "huggingface"
-    - option "mistral" [selected]
-    - option "nvidia"
-    - option "openai"
-    - option "opencode"
-    - option "opencode-go"
-    - option "openrouter"
-    - option "together"
-    - option "vercel-ai-gateway"
-    - option "xai"
-  - text: API key
-  - textbox "API key":
-    - /placeholder: Enter an API key, or leave blank to use environment authentication
-  - group: Customized settings
-  - button "Cancel"
-  - button "Apply"
+  - button "Add provider" [disabled]:
+    - img
+    - text: Add provider
+  - button "Add a custom provider":
+    - img
+    - text: Add a custom provider

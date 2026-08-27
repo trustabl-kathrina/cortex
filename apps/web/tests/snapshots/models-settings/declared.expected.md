@@ -19,17 +19,13 @@
     - text: Close
   - heading "Models" [level=2]
   - paragraph: Enter your API keys to use models from the following providers.
+  - paragraph: "Provider setup is restricted on this deployment: only a local LiteLLM gateway (e.g. http://127.0.0.1:4000/v1) can be configured here. Other provider routes are managed by the administrator in settings.yaml."
   - list:
     - listitem:
-      - text: mistral
-      - img "API key configured"
-      - button "Edit mistral": Edit
-      - button "Delete mistral": Delete
-    - listitem:
-      - text: Acme Gateway Custom
-      - button "Edit Acme Gateway (acme-gateway)": Edit
-      - button "Delete Acme Gateway (acme-gateway)": Delete
-  - button "Add provider":
+      - text: LiteLLM Custom
+      - button "Edit LiteLLM (litellm)": Edit
+      - button "Delete LiteLLM (litellm)": Delete
+  - button "Add provider" [disabled]:
     - img
     - text: Add provider
   - button "Add a custom provider":

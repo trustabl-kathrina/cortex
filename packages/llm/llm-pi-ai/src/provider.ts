@@ -44,6 +44,14 @@ import { catalogProvider } from './catalog.ts'
  * still reach every protocol through their own provider; only an explicit
  * override is refused.
  */
+// PROVIDER-UI LOCKDOWN NOTE: all three wire protocols below — the two
+// OpenAI-shaped ones AND `anthropic-messages` — are deliberately kept fully
+// implemented, together with every catalog vendor and custom gateway route
+// this adapter serves. Existing and settings.yaml-configured routes must keep
+// working unchanged. The restriction to "an approved local LiteLLM instance
+// only" lives exclusively in the web client
+// (packages/client/ui-settings-models/src/client/lockdown.ts): the UI stops OFFERING external
+// configuration; this adapter never stopped supporting it.
 const PROTOCOLS: Readonly<Record<string, () => ProviderStreams>> = {
   'openai-completions': openAICompletionsApi,
   'openai-responses': openAIResponsesApi,

@@ -1,7 +1,7 @@
-- dialog "Delete mistral?":
-  - heading "Delete mistral?" [level=2]
+- dialog "Delete LiteLLM Relay (litellm)?":
+  - heading "Delete LiteLLM Relay (litellm)?" [level=2]
   - button "Close":
     - img
-  - paragraph: Deleting mistral removes its configuration and stored API key.
+  - paragraph: Deleting LiteLLM Relay (litellm) removes its configuration and stored API key.
   - button "Cancel"
-  - button "Delete mistral"
+  - button "Delete LiteLLM Relay (litellm)"

@@ -25,6 +25,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { IApiClient } from '@cortex/api-remotes/client'
 import { apiKeyFailure } from './apiKey.ts'
+import { PROVIDER_UI_LOCKDOWN, isApprovedLocalEndpoint } from './lockdown.ts'
 import { EditorFooter } from './EditorFooter.tsx'
 import { validateCortexModels } from './model-drafts.ts'
 import { ModelListEditor } from './ModelListEditor.tsx'
@@ -103,11 +104,18 @@ export function CustomProviderCard(props: CustomProviderCardProps): ReactNode {
   // fallbacks; what a route cannot default is at least one model.
   const modelFailure = validateCortexModels(models)
   const keyFailure = apiKeyFailure(keyDraft)
+  // Deployment lockdown: a hand-declared route may only target the approved
+  // local LiteLLM gateway. The check is client-side by design — settings.yaml
+  // (the administrator path) is not subject to it.
+  const endpointBlocked = PROVIDER_UI_LOCKDOWN && baseURL.length > 0 && !isApprovedLocalEndpoint(baseURL)
   // The typed key with paste whitespace removed. A blank field yields an empty
   // string, which the create path reads as "no key supplied" — a route may
   // legitimately authenticate through the provider's own ambient discovery.
   const keyValue = keyDraft.trim()
   const ready = route.length > 0 && !routeInvalid && !routeTaken
+    // The lockdown gate: the endpoint the card always required must also be
+    // the approved local gateway (see lockdown.ts).
+    && !endpointBlocked
     && baseURL.length > 0 && models.length > 0 && modelFailure === undefined
     && keyFailure === undefined
   // The one blocked gate worth a line under the form. A satisfied card says
@@ -227,12 +235,13 @@ export function CustomProviderCard(props: CustomProviderCardProps): ReactNode {
           className={styles['input']}
           type="text"
           value={baseURL}
-          placeholder="https://gateway.example/v1"
+          placeholder={PROVIDER_UI_LOCKDOWN ? 'http://127.0.0.1:4000/v1' : 'https://gateway.example/v1'}
           aria-label={t('baseUrl')}
           disabled={profileDisabled}
           onChange={(event) => { setBaseURL(event.target.value) }}
         />
       </div>
+      {endpointBlocked ? <p className={styles['error']}>{t('lockedEndpoint')}</p> : null}
       <div className={styles['field']}>
         <span className={styles['fieldLabel']}>{t('customApi')}</span>
         <select

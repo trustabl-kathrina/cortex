@@ -109,6 +109,13 @@ export const SUPPORTED_THINKING_FORMATS = Object.keys(THINKING_FORMAT_GATE) as r
  * a profile naming any route pi-ai ships still resolves against the shipped
  * entry, and a stored profile stays editable whether or not its route is
  * proposed here. `satisfies` pins every key to a provider pi-ai really ships.
+ *
+ * PROVIDER-UI LOCKDOWN NOTE: independent of this offer list, the web client
+ * additionally refuses to ADD any catalog provider from the Models page
+ * (see packages/client/ui-settings-models/src/client/lockdown.ts) — only a local LiteLLM
+ * gateway may be declared there. This list, the catalog behind it, and every
+ * vendor endpoint stay intact so settings.yaml-configured routes and their
+ * model metadata keep working exactly as before.
  */
 const OFFERED_CATALOG_PROVIDERS = {
   'amazon-bedrock': true,

@@ -76,7 +76,7 @@ function scriptedFace(options: {
   set?: ReturnType<typeof vi.fn>
 } = {}) {
   const providers = options.providers ?? {
-    openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'https://proxy.example/v1' },
+    openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'http://127.0.0.1:4000/v1' },
   }
   const namespace = piAiNamespace(providers, options.userProviders ?? providers, options.baseProviders ?? {})
   const discover = options.discover ?? vi.fn(() => Promise.resolve(ok({ models: [] })))
@@ -215,7 +215,7 @@ describe('model list editing', () => {
 
   it('names a duplicate model id in the edit flow too', async () => {
     const { mutate } = await mountSection({
-      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'dup' }] } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', models: [{ id: 'dup' }] } },
     })
     openEditor('openai')
 
@@ -273,7 +273,7 @@ describe('model list editing', () => {
     await mountSection({
       providers: {
         openai: {
-          baseURL: 'https://proxy.example/v1',
+          baseURL: 'http://127.0.0.1:4000/v1',
           models: [{ id: 'kept', contextWindow: 1_000_000, maxTokens: 256_000 }],
         },
       },
@@ -290,7 +290,7 @@ describe('model list editing', () => {
 
   it('edits one row of several and lets a cleared capacity leave the profile', async () => {
     const { mutate } = await mountSection({
-      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'first' }, { id: 'second' }] } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', models: [{ id: 'first' }, { id: 'second' }] } },
     })
     openEditor('openai')
 
@@ -310,7 +310,7 @@ describe('model list editing', () => {
   })
 
   it('shows the adapter defaults as inherited until an edit takes them over', async () => {
-    await mountSection({ providers: { openai: { baseURL: 'https://proxy.example/v1' } } })
+    await mountSection({ providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1' } } })
     openEditor('openai')
 
     // The user layer names no models, so the list belongs to the adapter and
@@ -324,7 +324,7 @@ describe('model list editing', () => {
     await mountSection({
       providers: {
         openai: {
-          baseURL: 'https://proxy.example/v1',
+          baseURL: 'http://127.0.0.1:4000/v1',
           models: [{ id: 'first' }, { id: 'second' }, { id: 'third' }],
         },
       },
@@ -347,7 +347,7 @@ describe('model list editing', () => {
     await mountSection({
       providers: {
         openai: {
-          baseURL: 'https://proxy.example/v1',
+          baseURL: 'http://127.0.0.1:4000/v1',
           models: [{ id: 'first' }, { id: 'second' }, { id: 'third' }],
         },
       },
@@ -369,7 +369,7 @@ describe('model list editing', () => {
 
   it('separates emptying the list from restoring the adapter defaults', async () => {
     const { mutate } = await mountSection({
-      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'kept' }] } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', models: [{ id: 'kept' }] } },
     })
     openEditor('openai')
 
@@ -430,7 +430,7 @@ describe('endpoint interrogation', () => {
     openEditor('openai')
 
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'typed-not-saved' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://edited.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4001/v1' } })
     fireEvent.click(screen.getByText(en.fetchModels))
 
     await waitFor(() => { expect(discover).toHaveBeenCalled() })
@@ -439,7 +439,7 @@ describe('endpoint interrogation', () => {
       // The route is named, so an adapter that already describes it answers
       // from its own registry rather than the endpoint.
       provider: 'openai',
-      baseURL: 'https://edited.example/v1',
+      baseURL: 'http://127.0.0.1:4001/v1',
       apiKey: 'typed-not-saved',
     })
   })
@@ -448,7 +448,7 @@ describe('endpoint interrogation', () => {
     const discover = vi.fn(() => Promise.resolve(ok({ models: [] })))
     await mountSection({
       discover,
-      providers: { openai: { baseURL: 'https://proxy.example/v1', api: 'openai-responses' } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', api: 'openai-responses' } },
     })
     openEditor('openai')
 
@@ -458,7 +458,7 @@ describe('endpoint interrogation', () => {
     expect(firstProbe(discover)).toEqual({
       settingsNs: 'llm-pi-ai',
       provider: 'openai',
-      baseURL: 'https://proxy.example/v1',
+      baseURL: 'http://127.0.0.1:4000/v1',
       api: 'openai-responses',
     })
   })
@@ -469,7 +469,7 @@ describe('endpoint interrogation', () => {
     })))
     const { mutate } = await mountSection({
       discover,
-      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'kept', contextWindow: 111 }] } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', models: [{ id: 'kept', contextWindow: 111 }] } },
     })
     openEditor('openai')
 
@@ -490,7 +490,7 @@ describe('endpoint interrogation', () => {
 
   it('keeps the rows editable when the provider cannot be interrogated', async () => {
     const discover = vi.fn(() => Promise.resolve(
-      fail('https://proxy.example/v1/models answered 401; check the API key', 'model-discovery-failed'),
+      fail('http://127.0.0.1:4000/v1/models answered 401; check the API key', 'model-discovery-failed'),
     ))
     await mountSection({ discover })
     openEditor('openai')
@@ -517,17 +517,18 @@ describe('endpoint interrogation', () => {
     await screen.findByText('carrier down')
   })
 
-  it('can be asked for a configured route even with no endpoint', async () => {
-    const discover = vi.fn(() => Promise.resolve(ok({ models: [{ id: 'from-registry' }] })))
-    await mountSection({ discover, providers: { openai: {} } })
-    openEditor('openai')
-
-    // A route the adapter already describes needs no endpoint at all.
-    expect(buttonNamed(en.fetchModels).disabled).toBe(false)
-    fireEvent.click(screen.getByText(en.fetchModels))
-
-    await waitFor(() => { expect(discover).toHaveBeenCalled() })
-    expect(firstProbe(discover)).toEqual({ settingsNs: 'llm-pi-ai', provider: 'openai' })
+  it('locks a route with no endpoint of its own, which rides the vendor default', async () => {
+    // Under the provider lockdown (src/client/lockdown.ts) a profile without
+    // a baseURL uses the catalog vendor's external endpoint, so its row is
+    // not editable from the UI. The registry-probe path this test used to
+    // exercise is unreachable now; discovery itself stays covered by the
+    // localhost cases above.
+    await mountSection({ providers: { openai: {} } })
+    const edit = screen.getByRole<HTMLButtonElement>('button', {
+      name: providerCopy(en.editProvider, { provider: 'openai', displayName: 'openai' }),
+    })
+    expect(edit.disabled).toBe(true)
+    expect(edit.title).toBe(en.lockedRow)
   })
 
   it('keeps the create card asking only once it has an endpoint', () => {
@@ -543,21 +544,21 @@ describe('endpoint interrogation', () => {
     expect(buttonNamed(en.fetchModels).disabled).toBe(true)
     expect(buttonNamed(en.fetchModels).title).toBe(en.fetchNeedsBaseUrl)
 
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     expect(buttonNamed(en.fetchModels).disabled).toBe(false)
     fireEvent.click(screen.getByText(en.fetchModels))
 
     // A provider being declared names no route, so only the endpoint travels.
     expect(firstProbe(scripted.discover)).toEqual({
       settingsNs: 'llm-pi-ai',
-      baseURL: 'https://acme.test/v1',
+      baseURL: 'http://127.0.0.1:4100/v1',
       api: 'openai-completions',
     })
   })
 
   it('folds a row\u2019s capacities away until they are asked for', async () => {
     await mountSection({
-      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'only' }] } },
+      providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1', models: [{ id: 'only' }] } },
     })
     openEditor('openai')
 
@@ -610,7 +611,7 @@ describe('provider rows', () => {
     await mountSection({
       providers: {
         openai: { apiKeyEnv: 'OPENAI_API_KEY' },
-        'acme-gateway': { apiKeyEnv: 'ACME_GATEWAY_API_KEY', baseURL: 'https://acme.test/v1' },
+        'acme-gateway': { apiKeyEnv: 'ACME_GATEWAY_API_KEY', baseURL: 'http://127.0.0.1:4100/v1' },
       },
       declaredRoutes: ['acme-gateway'],
     })
@@ -627,7 +628,7 @@ describe('provider rows', () => {
   })
 
   it('shows no tag when the adapter draws no catalog distinction', async () => {
-    const scripted = scriptedFace({ providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY' } } })
+    const scripted = scriptedFace({ providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'http://127.0.0.1:4000/v1' } } })
     scripted.face.llm.providers = vi.fn(() => Promise.resolve(ok({
       providers: [{
         provider: 'openai',
@@ -674,12 +675,28 @@ describe('hand-declared providers', () => {
     return { ...scripted, onClose }
   }
 
+  // Provider lockdown (src/client/lockdown.ts): declaring a route is the one
+  // way the UI may still configure a provider, and only toward the approved
+  // local LiteLLM gateway.
+  it('refuses an external endpoint and accepts the local gateway', () => {
+    mountCard()
+    fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'litellm' } })
+    fireEvent.click(screen.getByRole('button', { name: en.addModel }))
+    fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'gpt-local' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://api.mistral.ai/v1' } })
+    expect(screen.getByText(en.lockedEndpoint)).toBeTruthy()
+    expect(buttonNamed(en.create).disabled).toBe(true)
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4000/v1' } })
+    expect(screen.queryByText(en.lockedEndpoint)).toBeNull()
+    expect(buttonNamed(en.create).disabled).toBe(false)
+  })
+
   it('writes the whole profile and the key under the derived reference', async () => {
     const { mutate, set, onClose } = mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme-gateway' } })
     fireEvent.change(screen.getByLabelText(en.customDisplayName), { target: { value: 'Acme Gateway' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://gateway.acme.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4200/v1' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'gw-key' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
@@ -697,7 +714,7 @@ describe('hand-declared providers', () => {
           displayName: 'Acme Gateway',
           apiKeyEnv: 'ACME_GATEWAY_API_KEY',
           api: 'openai-completions',
-          baseURL: 'https://gateway.acme.example/v1',
+          baseURL: 'http://127.0.0.1:4200/v1',
           models: [{ id: 'acme-large', contextWindow: 65_536 }],
         },
       }],
@@ -724,7 +741,7 @@ describe('hand-declared providers', () => {
 
     // A shipped route's models each carry their own protocol, so its editor
     // offers no route-level protocol to override them with.
-    await mountSection({ providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY' } } })
+    await mountSection({ providers: { openai: { apiKeyEnv: 'OPENAI_API_KEY', baseURL: 'http://127.0.0.1:4000/v1' } } })
     openEditor('openai')
     fireEvent.click(screen.getByText(en.customized))
     expect(fields()).toEqual([en.keyInput, en.baseUrl])
@@ -733,7 +750,7 @@ describe('hand-declared providers', () => {
     // A hand-declared route named its own protocol at creation, so editing it
     // reaches the same field the create card asked for.
     await mountSection({
-      providers: { 'acme-gateway': { api: 'openai-completions', baseURL: 'https://gateway.acme.example/v1' } },
+      providers: { 'acme-gateway': { api: 'openai-completions', baseURL: 'http://127.0.0.1:4200/v1' } },
       declaredRoutes: ['acme-gateway'],
     })
     openEditor('acme-gateway')
@@ -743,7 +760,7 @@ describe('hand-declared providers', () => {
   it('renames a declared route and falls back to its id when the name is cleared', async () => {
     const { mutate } = await mountSection({
       providers: {
-        'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions', baseURL: 'https://acme.test/v1' },
+        'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions', baseURL: 'http://127.0.0.1:4100/v1' },
       },
       declaredRoutes: ['acme-gateway'],
     })
@@ -768,8 +785,8 @@ describe('hand-declared providers', () => {
     // layer alone, and clearing it restores the layer beneath — the
     // composition name here, not the route id — so that is what it offers.
     await mountSection({
-      providers: { 'acme-gateway': { displayName: 'Acme (pinned)', api: 'openai-completions' } },
-      baseProviders: { 'acme-gateway': { displayName: 'Acme (pinned)', api: 'openai-completions' } },
+      providers: { 'acme-gateway': { displayName: 'Acme (pinned)', api: 'openai-completions', baseURL: 'http://127.0.0.1:4100/v1' } },
+      baseProviders: { 'acme-gateway': { displayName: 'Acme (pinned)', api: 'openai-completions', baseURL: 'http://127.0.0.1:4100/v1' } },
       userProviders: {},
       declaredRoutes: ['acme-gateway'],
     })
@@ -784,7 +801,7 @@ describe('hand-declared providers', () => {
     // The status line used to echo the target captured when the card opened,
     // which never lied while the name could not change. It can now.
     const { face } = await mountSection({
-      providers: { 'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions' } },
+      providers: { 'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions', baseURL: 'http://127.0.0.1:4100/v1' } },
       declaredRoutes: ['acme-gateway'],
     })
     // The reload after the write answers with the renamed route, exactly as
@@ -815,7 +832,7 @@ describe('hand-declared providers', () => {
     // `llm-pi-ai` rejects an empty displayName outright, so clearing the field
     // must unset it — which is also what the user means: use the route id.
     const { mutate } = await mountSection({
-      providers: { 'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions' } },
+      providers: { 'acme-gateway': { displayName: 'Acme Gateway', api: 'openai-completions', baseURL: 'http://127.0.0.1:4100/v1' } },
       declaredRoutes: ['acme-gateway'],
     })
     openEditor('acme-gateway')
@@ -834,7 +851,7 @@ describe('hand-declared providers', () => {
         'acme-gateway': {
           apiKeyEnv: 'ACME_GATEWAY_API_KEY',
           api: 'openai-completions',
-          baseURL: 'https://gateway.acme.example/v1',
+          baseURL: 'http://127.0.0.1:4200/v1',
           models: [{ id: 'acme-large' }],
         },
       },
@@ -844,7 +861,10 @@ describe('hand-declared providers', () => {
 
     const protocol = screen.getByLabelText<HTMLSelectElement>(en.customApi)
     expect(protocol.value).toBe('openai-completions')
-    fireEvent.change(protocol, { target: { value: 'anthropic-messages' } })
+    // Under the provider lockdown the select offers only the OpenAI-shaped
+    // protocols, so the edit moves between those two; `anthropic-messages`
+    // stays schema-valid for settings.yaml routes but is not offered here.
+    fireEvent.change(protocol, { target: { value: 'openai-responses' } })
     fireEvent.click(screen.getByText(en.apply))
 
     await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
@@ -852,7 +872,7 @@ describe('hand-declared providers', () => {
     // op restates it.
     expect(firstMutate(mutate)).toEqual({
       ns: 'llm-pi-ai',
-      ops: [{ op: 'set', path: ['providers', 'acme-gateway', 'api'], value: 'anthropic-messages' }],
+      ops: [{ op: 'set', path: ['providers', 'acme-gateway', 'api'], value: 'openai-responses' }],
       expectedRevision: 3,
     })
   })
@@ -862,7 +882,7 @@ describe('hand-declared providers', () => {
     // to resolve, so the card can be opened over one. The select must not read
     // as if that route had picked its first choice.
     await mountSection({
-      providers: { 'acme-gateway': { baseURL: 'https://gateway.acme.example/v1' } },
+      providers: { 'acme-gateway': { baseURL: 'http://127.0.0.1:4200/v1' } },
       declaredRoutes: ['acme-gateway'],
     })
     openEditor('acme-gateway')
@@ -877,7 +897,7 @@ describe('hand-declared providers', () => {
     const { mutate, onClose } = mountCard({}, { set })
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: '  gw-key  ' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
@@ -911,7 +931,7 @@ describe('hand-declared providers', () => {
     const { onClose } = mountCard({}, { set })
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'gw-key' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
@@ -928,7 +948,7 @@ describe('hand-declared providers', () => {
     mountCard()
     const routeField = screen.getByLabelText(en.customRoute)
     fireEvent.change(routeField, { target: { value: '2' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
 
@@ -947,7 +967,7 @@ describe('hand-declared providers', () => {
   it('refuses a route id whose derived credential reference would be illegal', () => {
     mountCard()
     const routeField = screen.getByLabelText(en.customRoute)
-    fireEvent.change(routeField, { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(routeField, { target: { value: 'http://127.0.0.1:4100/v1' } })
 
     // Without this check a digit-leading id passes the card and fails at the
     // credential seam with a raw regular expression: the
@@ -990,7 +1010,7 @@ describe('hand-declared providers', () => {
 
     // Endpoint first: the gate names the one thing standing in the way.
     expect(screen.getByText(en.customNeedsBaseUrl)).toBeTruthy()
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     expect(screen.getByText(en.customNeedsModels)).toBeTruthy()
 
     // Satisfied: the shared line disappears rather than rendering empty.
@@ -1004,7 +1024,7 @@ describe('hand-declared providers', () => {
   it('refuses to create while a capacity is unreadable', () => {
     mountCard()
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
     expandModel(1)
@@ -1017,7 +1037,7 @@ describe('hand-declared providers', () => {
   it('keeps each half-typed capacity with its own row across a removal', () => {
     mountCard()
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     for (const [at, id] of [[1, 'first'], [2, 'second'], [3, 'third']] as const) {
       fireEvent.click(screen.getByRole('button', { name: en.addModel }))
       fireEvent.change(screen.getByLabelText(`${en.modelId} ${String(at)}`), { target: { value: id } })
@@ -1039,7 +1059,7 @@ describe('hand-declared providers', () => {
   it('refuses two models sharing one id', () => {
     mountCard()
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'same' } })
@@ -1057,7 +1077,7 @@ describe('hand-declared providers', () => {
   it('creates a model with no capacities, which the route\u2019s fallbacks size', async () => {
     const { mutate, onClose } = mountCard()
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'bare' } })
 
@@ -1081,7 +1101,7 @@ describe('hand-declared providers', () => {
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
     expect(screen.getByText(en.customNeedsBaseUrl)).toBeTruthy()
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     expect(screen.getByText(en.customNeedsModels)).toBeTruthy()
     expect(buttonNamed(en.create).disabled).toBe(true)
 
@@ -1097,7 +1117,7 @@ describe('hand-declared providers', () => {
     const { onClose } = mountCard({ api: { ...scriptedFace({ mutate: refused }).face } as never })
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
     fireEvent.click(screen.getByText(en.create))
@@ -1111,7 +1131,7 @@ describe('hand-declared providers', () => {
     const { onClose } = mountCard({ api: { ...scriptedFace({ mutate: rejecting }).face } as never })
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
     fireEvent.click(screen.getByText(en.create))
@@ -1125,7 +1145,7 @@ describe('hand-declared providers', () => {
     const { onClose } = mountCard({ api: { ...scriptedFace({ set }).face } as never })
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'k' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
@@ -1139,7 +1159,7 @@ describe('hand-declared providers', () => {
     const { mutate, onClose } = mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.change(screen.getByLabelText(en.customApi), { target: { value: 'anthropic-messages' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
@@ -1152,7 +1172,7 @@ describe('hand-declared providers', () => {
     // nothing ever sets. The with-key case is covered above.
     expect(firstMutate(mutate).ops[0]?.value).toEqual({
       api: 'anthropic-messages',
-      baseURL: 'https://acme.test/v1',
+      baseURL: 'http://127.0.0.1:4100/v1',
       models: [{ id: 'm' }],
     })
   })
@@ -1175,7 +1195,7 @@ describe('hand-declared providers', () => {
   })
 
   it('closes the create card when an existing row is opened for editing', async () => {
-    await mountSection({ providers: { openai: { baseURL: 'https://proxy.example/v1' } } })
+    await mountSection({ providers: { openai: { baseURL: 'http://127.0.0.1:4000/v1' } } })
 
     fireEvent.click(screen.getByRole('button', { name: en.customAdd }))
     expect(screen.getByText(en.customTitle)).toBeTruthy()
@@ -1201,7 +1221,7 @@ describe('hand-declared providers', () => {
     const { mutate, set } = mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme-gateway' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://gateway.acme.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4200/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'sk-\u{1F600}' } })
@@ -1218,7 +1238,7 @@ describe('hand-declared providers', () => {
     mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme-gateway' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://gateway.acme.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4200/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'sk-\u{1F600}' } })
@@ -1234,7 +1254,7 @@ describe('hand-declared providers', () => {
     const { mutate } = mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme-gateway' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://gateway.acme.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4200/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: '   ' } })
@@ -1252,7 +1272,7 @@ describe('hand-declared providers', () => {
     const { set, onClose } = mountCard()
 
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'ambient-gateway' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://gateway.acme.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4200/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'acme-large' } })
     fireEvent.click(screen.getByText(en.create))
@@ -1269,7 +1289,7 @@ describe('API key field', () => {
 
     // The field opens empty even for a provider whose key is stored, where it
     // means "keep that one" — so editing anything else must not require it.
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://moved.example/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4002/v1' } })
     expect(buttonNamed(en.apply).disabled).toBe(false)
     fireEvent.click(screen.getByText(en.apply))
 
@@ -1367,7 +1387,7 @@ describe('API key field', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.customAdd }))
     fireEvent.change(screen.getByLabelText(en.customRoute), { target: { value: 'acme' } })
-    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://acme.test/v1' } })
+    fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'http://127.0.0.1:4100/v1' } })
     fireEvent.click(screen.getByRole('button', { name: en.addModel }))
     fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'm' } })
     fireEvent.click(screen.getByText(en.create))

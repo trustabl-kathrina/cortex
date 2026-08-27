@@ -251,7 +251,16 @@ const profile = z.object({
   retryPolicy: RetryPolicySchema,
 })
 
-/** Runtime schema for {@link Config}. */
+/**
+ * Runtime schema for {@link Config}.
+ *
+ * PROVIDER-UI LOCKDOWN NOTE: this schema deliberately still accepts ANY
+ * `baseURL` and every `api` protocol (openai-completions, openai-responses,
+ * anthropic-messages). settings.yaml is the administrator's configuration
+ * path and is not restricted; only the web client refuses to write external
+ * providers (see packages/client/ui-settings-models/src/client/lockdown.ts). Narrowing the
+ * schema here would break existing file-configured routes — do not.
+ */
 export const Config: z<Config> = z.object({
   providers: z.dict(profile).default({}),
 })

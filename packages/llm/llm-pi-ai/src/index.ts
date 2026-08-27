@@ -117,6 +117,12 @@ function registrationFacts(profiles: ReadonlyMap<string, ResolvedPiAiProviderPro
  * @param profiles - the currently resolved provider profiles.
  * @returns the directory entries in catalog order, declared routes last.
  */
+// PROVIDER-UI LOCKDOWN NOTE: the directory assembled here still offers the
+// full allowlisted catalog to the API (`llm.providers`), and every stored
+// route regardless of origin. The web client renders those offers but makes
+// the external ones non-clickable (see
+// packages/client/ui-settings-models/src/client/lockdown.ts); trimming them out of the
+// directory itself would hide administrator-provisioned routes from the page.
 function directoryEntries(
   profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>,
 ): LlmConfigurableProvider[] {
